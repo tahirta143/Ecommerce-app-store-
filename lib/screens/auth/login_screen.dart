@@ -1,13 +1,15 @@
 import 'package:ecommerce_app/screens/admin/admin_dashboard_screen.dart';
 import 'package:ecommerce_app/screens/auth/signup_screen.dart';
 import 'package:ecommerce_app/models/user.dart';
-import 'package:ecommerce_app/providers/auth_provider.dart';
+
 import 'package:ecommerce_app/screens/dashboard/main_wrapper.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  static const Color _primaryColor = Color(0xFF6366F1); // Indigo
+  static const Color _secondaryColor = Color(0xFF8B5CF6);
 
   @override
   void initState() {
@@ -147,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen>
                 );
               },
               child: Container(
-                height: screenHeight * 0.65, // Adjusted height for better proportion
+                height: screenHeight * 0.65,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
@@ -183,34 +187,6 @@ class _LoginScreenState extends State<LoginScreen>
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title
-        Center(
-          child: Column(
-            children: [
-              // Text(
-              //   "Welcome Back!",
-              //   style: GoogleFonts.poppins(
-              //     fontSize: isSmallScreen ? 26 : isLargeScreen ? 34 : 30,
-              //     fontWeight: FontWeight.w800,
-              //     color: const Color(0xFF1F2937),
-              //     letterSpacing: -0.5,
-              //   ),
-              // ),
-              // SizedBox(height: isSmallScreen ? 8 : 12),
-              // Text(
-              //   "Sign in to your account",
-              //   style: GoogleFonts.poppins(
-              //     fontSize: isSmallScreen ? 15 : 17,
-              //     color: const Color(0xFF6B7280),
-              //     fontWeight: FontWeight.w400,
-              //   ),
-              // ),
-            ],
-          ),
-        ),
-
-        // SizedBox(height: isSmallScreen ? 32 : 40),
-
         // Email field
         _buildTextField(
           controller: _emailController,
@@ -227,83 +203,103 @@ class _LoginScreenState extends State<LoginScreen>
 
         SizedBox(height: isSmallScreen ? 32 : 40),
 
-        // Login button
-        SizedBox(
-          width: double.infinity,
-          height: isSmallScreen ? 54 : 58,
-          child: ElevatedButton(
-            onPressed: () {
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
-              final email = _emailController.text.trim();
-              final password = _passwordController.text.trim();
-
-              if (email.isEmpty || password.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please fill in all fields")),
-                );
-                return;
-              }
-
-              authProvider.login(email, password).then((_) {
-                 if (authProvider.currentUser?.role == UserRole.admin) {
-                     Navigator.pushReplacement(
-                       context,
-                       MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-                     );
-                 } else {
-                   Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                      const MainWrapper(),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                        final slide = Tween<Offset>(
-                          begin: const Offset(1.0, 0.0),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeInOut,
-                        ));
-                        return SlideTransition(
-                          position: slide,
-                          child: child,
-                        );
-                      },
-                      transitionDuration: const Duration(milliseconds: 600),
-                    ),
-                  );
-                 }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7C3AED),
-              foregroundColor: Colors.white,
-              elevation: 5,
-              shadowColor: const Color(0xFF7C3AED).withOpacity(0.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Sign In",
-                  style: GoogleFonts.poppins(
-                    fontSize: isSmallScreen ? 16 : 18,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+        // Login button with loading state
+        Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            return SizedBox(
+              width: double.infinity,
+              height: isSmallScreen ? 54 : 58,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [
+                      _primaryColor,
+                      _secondaryColor,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-                SizedBox(width: isSmallScreen ? 10 : 12),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: isSmallScreen ? 20 : 22,
+                child: ElevatedButton(
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () => _handleLogin(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    elevation: 5,
+                    shadowColor: const Color(0xFF6366F1).withOpacity(0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
+                    ),
+                  ),
+                  child: authProvider.isLoading
+                      ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        "Signing In...",
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  )
+                      : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Sign In",
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 10 : 12),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: isSmallScreen ? 20 : 22,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
+        ),
+
+        // Show error message if any
+        Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            if (authProvider.errorMessage != null) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Center(
+                  child: Text(
+                    authProvider.errorMessage!,
+                    style: GoogleFonts.poppins(
+                      color: Colors.red.shade700,
+                      fontSize: isSmallScreen ? 13 : 14,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
 
         SizedBox(height: isSmallScreen ? 24 : 32),
@@ -418,7 +414,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: Text(
                 "Sign Up",
                 style: GoogleFonts.poppins(
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(0xFF6366F1),
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -428,6 +424,70 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       ],
     );
+  }
+
+  // Handle login
+  // Handle login
+  Future<void> _handleLogin(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please fill in all fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Hide keyboard
+    FocusScope.of(context).unfocus();
+
+    print('Attempting login with email: $email');
+    bool success = await authProvider.login(email, password);
+
+    print('Login success: $success');
+    if (success) {
+      print('Current user role: ${authProvider.currentUser?.role}');
+      print('Is admin: ${authProvider.isAdmin}');
+    }
+
+    if (success && mounted) {
+      if (authProvider.isAdmin) {
+        print('Navigating to Admin Dashboard');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        );
+      } else {
+        print('Navigating to User Dashboard');
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+            const MainWrapper(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              final slide = Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ));
+              return SlideTransition(
+                position: slide,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 600),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildTextField({

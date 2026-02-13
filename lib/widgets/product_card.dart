@@ -1,6 +1,7 @@
 import 'package:ecommerce_app/models/product.dart';
 import 'package:ecommerce_app/screens/product_detail/product_detail_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ProductCard extends StatelessWidget {
@@ -17,12 +18,46 @@ class ProductCard extends StatelessWidget {
     this.onAddToCart,
   });
 
+  // Single cohesive color theme - Professional Indigo/Purple mix (matching MainWrapper)
+  static const Color _primaryColor = Color(0xFF6366F1); // Indigo
+  static const Color _secondaryColor = Color(0xFF8B5CF6); // Purple accent
+  static const Color _surfaceColor = Color(0xFFF8FAFC); // Light background
+  static const Color _textPrimary = Color(0xFF1E293B);
+  static const Color _textSecondary = Color(0xFF64748B);
+  static const Color _white = Color(0xFFFFFFFF);
+  static const Color _red = Color(0xFFE53E3E);
+  static const Color _red2 = Color(0xFFC53030);
+  static const Color _red3 = Color(0xFF9B2C2C);
+  static const Color _red4 = Color(0xFF742A2A);
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width >= 600;
+    final isDesktop = size.width >= 900;
+    final isLargeDesktop = size.width >= 1200;
+
     final hasDiscount = discountPercentage != null && discountPercentage! > 0;
     final originalPrice = hasDiscount
         ? product.price * 100 / (100 - discountPercentage!)
         : product.price;
+
+    // Responsive sizing
+    final double containerRadius = isLargeDesktop ? 24 : (isDesktop ? 20 : (isTablet ? 18 : 16));
+    final double imageHeight = isLargeDesktop ? 180 : (isDesktop ? 160 : (isTablet ? 140 : 130));
+    final double imageWidth = isLargeDesktop ? 100 : (isDesktop ? 90 : (isTablet ? 85 : 80));
+    final double iconSize = isLargeDesktop ? 48 : (isDesktop ? 42 : (isTablet ? 38 : 36));
+    final double titleFontSize = isLargeDesktop ? 16 : (isDesktop ? 15 : (isTablet ? 14 : 13));
+    final double priceFontSize = isLargeDesktop ? 20 : (isDesktop ? 18 : (isTablet ? 17 : 16));
+    final double originalPriceFontSize = isLargeDesktop ? 13 : (isDesktop ? 12 : (isTablet ? 11.5 : 11));
+    final double buttonSize = isLargeDesktop ? 44 : (isDesktop ? 40 : (isTablet ? 36 : 32));
+    final double buttonIconSize = isLargeDesktop ? 22 : (isDesktop ? 20 : (isTablet ? 19 : 18));
+    final double badgeFontSize = isLargeDesktop ? 12 : (isDesktop ? 11 : (isTablet ? 10.5 : 10));
+    final double badgePadding = isLargeDesktop ? 12 : (isDesktop ? 10 : (isTablet ? 9 : 8));
+    final double ratingFontSize = isLargeDesktop ? 12 : (isDesktop ? 11 : (isTablet ? 10.5 : 10));
+    final double ratingIconSize = isLargeDesktop ? 14 : (isDesktop ? 13 : (isTablet ? 12.5 : 12));
+    final double contentPadding = isLargeDesktop ? 16 : (isDesktop ? 14 : (isTablet ? 13 : 12));
+    final double borderRadius = isLargeDesktop ? 12 : (isDesktop ? 10 : (isTablet ? 9 : 8));
 
     return GestureDetector(
       onTap: () {
@@ -35,14 +70,14 @@ class ProductCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: _white,
+          borderRadius: BorderRadius.circular(containerRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: isLargeDesktop ? 16 : (isDesktop ? 14 : (isTablet ? 12 : 10)),
               spreadRadius: 0,
-              offset: const Offset(0, 4),
+              offset: Offset(0, isLargeDesktop ? 6 : (isDesktop ? 5 : (isTablet ? 4 : 3))),
             ),
           ],
         ),
@@ -54,13 +89,13 @@ class ProductCard extends StatelessWidget {
               children: [
                 // Product Image
                 Container(
-                  height: 130,
+                  height: imageHeight,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
+                    color: _surfaceColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(containerRadius),
+                      topRight: Radius.circular(containerRadius),
                     ),
                   ),
                   child: Stack(
@@ -68,22 +103,22 @@ class ProductCard extends StatelessWidget {
                       // Product Image Placeholder
                       Center(
                         child: Container(
-                          width: 80,
-                          height: 80,
+                          width: imageWidth,
+                          height: imageWidth,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _white,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withOpacity(0.05),
                                 blurRadius: 10,
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.shopping_bag_outlined,
-                            size: 36,
-                            color: Colors.grey,
+                            size: iconSize,
+                            color: _textSecondary.withOpacity(0.3),
                           ),
                         ),
                       ),
@@ -98,11 +133,11 @@ class ProductCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: _white,
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withOpacity(0.05),
                                 blurRadius: 4,
                               ),
                             ],
@@ -110,18 +145,18 @@ class ProductCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.star,
-                                size: 12,
+                                size: ratingIconSize,
                                 color: Colors.amber,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 rating.toStringAsFixed(1),
                                 style: GoogleFonts.poppins(
-                                  fontSize: 10,
+                                  fontSize: ratingFontSize,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
+                                  color: _textPrimary,
                                 ),
                               ),
                             ],
@@ -134,7 +169,7 @@ class ProductCard extends StatelessWidget {
 
                 // Product Info
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(contentPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -144,14 +179,14 @@ class ProductCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
-                          fontSize: 13,
+                          fontSize: titleFontSize,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                          color: _textPrimary,
                           height: 1.3,
                         ),
                       ),
 
-                      const SizedBox(height: 6),
+                      SizedBox(height: isLargeDesktop ? 8 : (isDesktop ? 7 : (isTablet ? 6.5 : 6))),
 
                       // Price Row
                       Row(
@@ -166,9 +201,9 @@ class ProductCard extends StatelessWidget {
                               Text(
                                 'Rs ${_formatPrice(product.price)}',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16,
+                                  fontSize: priceFontSize,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF2563EB),
+                                  color: _primaryColor,
                                 ),
                               ),
 
@@ -177,9 +212,9 @@ class ProductCard extends StatelessWidget {
                                 Text(
                                   'Rs ${_formatPrice(originalPrice)}',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 11,
+                                    fontSize: originalPriceFontSize,
                                     fontWeight: FontWeight.w400,
-                                    color: Colors.grey,
+                                    color: _textSecondary,
                                     decoration: TextDecoration.lineThrough,
                                   ),
                                 ),
@@ -190,22 +225,29 @@ class ProductCard extends StatelessWidget {
                           GestureDetector(
                             onTap: onAddToCart,
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: buttonSize,
+                              height: buttonSize,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB),
-                                borderRadius: BorderRadius.circular(8),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    _primaryColor,
+                                    _secondaryColor,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(borderRadius),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF2563EB).withOpacity(0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                                    color: _primaryColor.withOpacity(0.3),
+                                    blurRadius: isLargeDesktop ? 10 : (isDesktop ? 8 : (isTablet ? 7 : 6)),
+                                    offset: Offset(0, isLargeDesktop ? 4 : (isDesktop ? 3 : (isTablet ? 2.5 : 2))),
                                   ),
                                 ],
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add,
-                                size: 18,
+                                size: buttonIconSize,
                                 color: Colors.white,
                               ),
                             ),
@@ -221,31 +263,35 @@ class ProductCard extends StatelessWidget {
             // Discount Badge
             if (hasDiscount)
               Positioned(
-                top: 8,
-                left: 8,
+                top: isLargeDesktop ? 12 : (isDesktop ? 10 : (isTablet ? 9 : 8)),
+                left: isLargeDesktop ? 12 : (isDesktop ? 10 : (isTablet ? 9 : 8)),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: badgePadding,
+                    vertical: badgePadding * 0.5,
                   ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                    gradient: LinearGradient(
+                      colors: [
+                        _red,
+                        _red2,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isLargeDesktop ? 16 : (isDesktop ? 14 : (isTablet ? 13 : 12))),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.red.withOpacity(0.3),
-                        blurRadius: 8,
+                        color: _red.withOpacity(0.3),
+                        blurRadius: isLargeDesktop ? 12 : (isDesktop ? 10 : (isTablet ? 9 : 8)),
+                        offset: Offset(0, isLargeDesktop ? 4 : (isDesktop ? 3 : (isTablet ? 2.5 : 2))),
                       ),
                     ],
                   ),
                   child: Text(
                     '${discountPercentage!.toInt()}% OFF',
                     style: GoogleFonts.poppins(
-                      fontSize: 10,
+                      fontSize: badgeFontSize,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                       letterSpacing: -0.3,

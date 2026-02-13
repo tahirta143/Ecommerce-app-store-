@@ -1,4 +1,3 @@
-import 'package:ecommerce_app/providers/auth_provider.dart';
 import 'package:ecommerce_app/screens/admin/categories/admin_categories_screen.dart';
 import 'package:ecommerce_app/screens/admin/orders/admin_orders_screen.dart';
 import 'package:ecommerce_app/screens/admin/products/admin_products_screen.dart';
@@ -7,6 +6,8 @@ import 'package:ecommerce_app/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider/auth_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
