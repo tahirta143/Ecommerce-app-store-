@@ -12,7 +12,7 @@ class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key, required this.product});
 
   Future<void> _launchWhatsApp() async {
-    final String phoneNumber = "1234567890"; // Replace with actual number
+    final String phoneNumber = "03254828492"; // Replace with actual number
     final String message =
         "Hello, I would like to order: ${product.title} - \$${product.price}";
     final Uri url = Uri.parse("whatsapp://send?phone=$phoneNumber&text=${Uri.encodeComponent(message)}");
