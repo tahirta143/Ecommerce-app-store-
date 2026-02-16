@@ -1,10 +1,10 @@
-import 'package:ecommerce_app/models/product.dart';
-import 'package:ecommerce_app/screens/product_detail/product_detail_screen.dart';
-import 'package:ecommerce_app/screens/shop/shop_screen.dart';
+import 'package:ecommerce_app/widgets/product_card.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../../widgets/product_card.dart';
+import 'package:provider/provider.dart';
+import '../../models/products_model/products_model.dart';
+import '../../providers/products_provider/products_provider.dart'; // CHANGED to new model
+// CHANGED to correct provider
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -15,7 +15,6 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen>
     with TickerProviderStateMixin {
-
   // Single cohesive color theme - Professional Indigo/Purple mix
   static const Color _primaryColor = Color(0xFF6366F1); // Indigo
   static const Color _secondaryColor = Color(0xFF8B5CF6); // Purple accent
@@ -45,7 +44,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
 
   // Subcategories based on main category
   List<String> getSubCategories(int index) {
-    switch(categories[index]["name"]) {
+    switch (categories[index]["name"]) {
       case "Electronics":
         return ["All", "Phones", "Laptops", "Accessories", "Audio", "Wearables"];
       case "Fashion":
@@ -153,455 +152,458 @@ class _CategoriesScreenState extends State<CategoriesScreen>
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Horizontal Scrollable Categories Row
-            Container(
-              height: isDesktop ? 140 : (isTablet ? 130 : 120),
-              color: _white,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(
-                  horizontal: spacing,
-                  vertical: spacing * 0.5,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final isSelected = _selectedCategoryIndex == index;
-                  return GestureDetector(
-                    onTap: () => _selectCategory(index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: isDesktop ? 120 : (isTablet ? 110 : 100),
-                      margin: EdgeInsets.only(right: spacing * 0.75),
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [_primaryColor, _secondaryColor],
-                        )
-                            : null,
-                        color: isSelected ? null : _white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: isSelected
-                            ? null
-                            : Border.all(color: Colors.grey[200]!, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isSelected
-                                ? _primaryColor.withOpacity(0.3)
-                                : Colors.grey.withOpacity(0.1),
-                            blurRadius: isSelected ? 12 : 8,
-                            offset: Offset(0, isSelected ? 4 : 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Category Icon
-                          Container(
-                            padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? _white.withOpacity(0.2)
-                                  : _accentLight,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              categories[index]["icon"],
-                              size: isDesktop ? 32 : (isTablet ? 28 : 24),
-                              color: isSelected
-                                  ? _white
-                                  : _primaryColor,
-                            ),
-                          ),
-                          SizedBox(height: spacing * 0.5),
-                          // Category Name
-                          Text(
-                            categories[index]["name"],
-                            style: GoogleFonts.poppins(
-                              fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? _white : _textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          // Product count
-                          Text(
-                            "${categories[index]["count"]} items",
-                            style: GoogleFonts.poppins(
-                              fontSize: isDesktop ? 10 : (isTablet ? 9 : 8),
-                              color: isSelected ? _white.withOpacity(0.8) : _textSecondary,
-                            ),
-                          ),
-                          if (isSelected) ...[
-                            SizedBox(height: spacing * 0.25),
-                            Container(
-                              width: 30,
-                              height: 3,
-                              decoration: BoxDecoration(
-                                color: _white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Selected Category Content
-            if (_selectedCategoryIndex != null) ...[
-              // Category Header with Stats
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: spacing,
-                  vertical: spacing * 0.75,
-                ),
-                decoration: BoxDecoration(
+        child: Consumer<ProductProvider>(
+          builder: (context, productProvider, child) {
+            return Column(
+              children: [
+                // Horizontal Scrollable Categories Row
+                Container(
+                  height: isDesktop ? 140 : (isTablet ? 130 : 120),
                   color: _white,
-                  border: Border(
-                    top: BorderSide(color: Colors.grey[200]!),
-                    bottom: BorderSide(color: Colors.grey[200]!),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_primaryColor, _secondaryColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        categories[_selectedCategoryIndex!]["icon"],
-                        size: isDesktop ? 24 : (isTablet ? 22 : 20),
-                        color: _white,
-                      ),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing,
+                      vertical: spacing * 0.5,
                     ),
-                    SizedBox(width: spacing * 0.75),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          categories[_selectedCategoryIndex!]["name"],
-                          style: GoogleFonts.poppins(
-                            fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
-                            fontWeight: FontWeight.w600,
-                            color: _textPrimary,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _accentLight,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${getSubCategories(_selectedCategoryIndex!).length} subcategories',
-                                style: GoogleFonts.poppins(
-                                  fontSize: isDesktop ? 12 : (isTablet ? 11 : 10),
-                                  color: _primaryColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _accentLight,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${categories[_selectedCategoryIndex!]["count"]} items',
-                                style: GoogleFonts.poppins(
-                                  fontSize: isDesktop ? 12 : (isTablet ? 11 : 10),
-                                  color: _secondaryColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedCategoryIndex = null;
-                            _selectedSubCategory = null;
-                          });
-                        },
-                        icon: const Icon(Icons.close, size: 20),
-                        color: _textSecondary,
-                        style: IconButton.styleFrom(
-                          backgroundColor: _white,
-                          padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Horizontal Scrollable Subcategory Chips
-              Container(
-                height: isDesktop ? 70 : (isTablet ? 65 : 60),
-                color: _white,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: spacing,
-                    vertical: spacing * 0.5,
-                  ),
-                  itemCount: getSubCategories(_selectedCategoryIndex!).length,
-                  itemBuilder: (context, index) {
-                    final subCategory = getSubCategories(_selectedCategoryIndex!)[index];
-                    final isSelected = _selectedSubCategory == subCategory;
-
-                    return GestureDetector(
-                      onTap: () => _selectSubCategory(subCategory),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: EdgeInsets.only(right: spacing * 0.75),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isDesktop ? 24 : (isTablet ? 20 : 16),
-                          vertical: isDesktop ? 12 : (isTablet ? 10 : 8),
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: isSelected
-                              ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [_primaryColor, _secondaryColor],
-                          )
-                              : null,
-                          color: isSelected ? null : _white,
-                          borderRadius: BorderRadius.circular(30),
-                          border: isSelected
-                              ? null
-                              : Border.all(color: Colors.grey[300]!, width: 1),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isSelected
-                                  ? _primaryColor.withOpacity(0.3)
-                                  : Colors.grey.withOpacity(0.1),
-                              blurRadius: isSelected ? 8 : 4,
-                              offset: Offset(0, isSelected ? 2 : 1),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getSubCategoryIcon(subCategory),
-                              size: isDesktop ? 18 : (isTablet ? 16 : 14),
-                              color: isSelected ? _white : _primaryColor,
-                            ),
-                            SizedBox(width: spacing * 0.4),
-                            Text(
-                              subCategory,
-                              style: GoogleFonts.poppins(
-                                fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                color: isSelected ? _white : _textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Products Grid with Animation
-              Expanded(
-                child: _selectedSubCategory == null
-                    ? Center(
-                  child: CircularProgressIndicator(
-                    color: _primaryColor,
-                    strokeWidth: 2,
-                  ),
-                )
-                    : FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: _buildProductsGrid(
-                    categories[_selectedCategoryIndex!]["name"],
-                    _selectedSubCategory!,
-                    crossAxisCount,
-                    productAspectRatio,
-                    spacing,
-                    isDesktop,
-                    isTablet,
-                    isLargeDesktop,
-                  ),
-                ),
-              ),
-            ] else ...[
-              // Enhanced empty state with featured categories
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(spacing * 2),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(isDesktop ? 40 : (isTablet ? 35 : 30)),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final isSelected = _selectedCategoryIndex == index;
+                      return GestureDetector(
+                        onTap: () => _selectCategory(index),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: isDesktop ? 120 : (isTablet ? 110 : 100),
+                          margin: EdgeInsets.only(right: spacing * 0.75),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [_primaryColor.withOpacity(0.1), _secondaryColor.withOpacity(0.1)],
+                            gradient: isSelected
+                                ? LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.category_outlined,
-                            size: isDesktop ? 80 : (isTablet ? 70 : 60),
-                            color: _primaryColor,
-                          ),
-                        ),
-                        SizedBox(height: spacing * 2),
-                        Text(
-                          "Browse Categories",
-                          style: GoogleFonts.poppins(
-                            fontSize: isDesktop ? 32 : (isTablet ? 28 : 24),
-                            fontWeight: FontWeight.w700,
-                            color: _textPrimary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        SizedBox(height: spacing * 0.75),
-                        Text(
-                          "Select a category to explore amazing products",
-                          style: GoogleFonts.poppins(
-                            fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
-                            color: _textSecondary,
-                          ),
-                        ),
-                        SizedBox(height: spacing * 3),
-
-                        // Popular Categories Preview
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: spacing),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Popular Categories",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
-                                      fontWeight: FontWeight.w600,
-                                      color: _textPrimary,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {},
-                                    child: Text(
-                                      "View All",
-                                      style: GoogleFonts.poppins(
-                                        color: _primaryColor,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: spacing),
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isDesktop ? 6 : (isTablet ? 4 : 3),
-                                  childAspectRatio: 0.9,
-                                  crossAxisSpacing: spacing * 0.75,
-                                  mainAxisSpacing: spacing * 0.75,
-                                ),
-                                itemCount: 6,
-                                itemBuilder: (context, index) {
-                                  return GestureDetector(
-                                    onTap: () => _selectCategory(index),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: _white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.grey[200]!),
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
-                                            decoration: BoxDecoration(
-                                              color: _accentLight,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              categories[index]["icon"],
-                                              size: isDesktop ? 28 : (isTablet ? 24 : 20),
-                                              color: _primaryColor,
-                                            ),
-                                          ),
-                                          SizedBox(height: spacing * 0.5),
-                                          Text(
-                                            categories[index]["name"],
-                                            style: GoogleFonts.poppins(
-                                              fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
-                                              fontWeight: FontWeight.w500,
-                                              color: _textPrimary,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                              colors: [_primaryColor, _secondaryColor],
+                            )
+                                : null,
+                            color: isSelected ? null : _white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: isSelected
+                                ? null
+                                : Border.all(color: Colors.grey[200]!, width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? _primaryColor.withOpacity(0.3)
+                                    : Colors.grey.withOpacity(0.1),
+                                blurRadius: isSelected ? 12 : 8,
+                                offset: Offset(0, isSelected ? 4 : 2),
                               ),
                             ],
                           ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Category Icon
+                              Container(
+                                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? _white.withOpacity(0.2)
+                                      : _accentLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  categories[index]["icon"],
+                                  size: isDesktop ? 32 : (isTablet ? 28 : 24),
+                                  color: isSelected ? _white : _primaryColor,
+                                ),
+                              ),
+                              SizedBox(height: spacing * 0.5),
+                              // Category Name
+                              Text(
+                                categories[index]["name"],
+                                style: GoogleFonts.poppins(
+                                  fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected ? _white : _textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              // Product count
+                              Text(
+                                "${categories[index]["count"]} items",
+                                style: GoogleFonts.poppins(
+                                  fontSize: isDesktop ? 10 : (isTablet ? 9 : 8),
+                                  color: isSelected ? _white.withOpacity(0.8) : _textSecondary,
+                                ),
+                              ),
+                              if (isSelected) ...[
+                                SizedBox(height: spacing * 0.25),
+                                Container(
+                                  width: 30,
+                                  height: 3,
+                                  decoration: BoxDecoration(
+                                    color: _white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Selected Category Content
+                if (_selectedCategoryIndex != null) ...[
+                  // Category Header with Stats
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing,
+                      vertical: spacing * 0.75,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _white,
+                      border: Border(
+                        top: BorderSide(color: Colors.grey[200]!),
+                        bottom: BorderSide(color: Colors.grey[200]!),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [_primaryColor, _secondaryColor],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            categories[_selectedCategoryIndex!]["icon"],
+                            size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                            color: _white,
+                          ),
+                        ),
+                        SizedBox(width: spacing * 0.75),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              categories[_selectedCategoryIndex!]["name"],
+                              style: GoogleFonts.poppins(
+                                fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+                                fontWeight: FontWeight.w600,
+                                color: _textPrimary,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _accentLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${getSubCategories(_selectedCategoryIndex!).length} subcategories',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: isDesktop ? 12 : (isTablet ? 11 : 10),
+                                      color: _primaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _accentLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${categories[_selectedCategoryIndex!]["count"]} items',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: isDesktop ? 12 : (isTablet ? 11 : 10),
+                                      color: _secondaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedCategoryIndex = null;
+                                _selectedSubCategory = null;
+                              });
+                            },
+                            icon: const Icon(Icons.close, size: 20),
+                            color: _textSecondary,
+                            style: IconButton.styleFrom(
+                              backgroundColor: _white,
+                              padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ],
-          ],
+
+                  // Horizontal Scrollable Subcategory Chips
+                  Container(
+                    height: isDesktop ? 70 : (isTablet ? 65 : 60),
+                    color: _white,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: spacing,
+                        vertical: spacing * 0.5,
+                      ),
+                      itemCount: getSubCategories(_selectedCategoryIndex!).length,
+                      itemBuilder: (context, index) {
+                        final subCategory = getSubCategories(_selectedCategoryIndex!)[index];
+                        final isSelected = _selectedSubCategory == subCategory;
+
+                        return GestureDetector(
+                          onTap: () => _selectSubCategory(subCategory),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: EdgeInsets.only(right: spacing * 0.75),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isDesktop ? 24 : (isTablet ? 20 : 16),
+                              vertical: isDesktop ? 12 : (isTablet ? 10 : 8),
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [_primaryColor, _secondaryColor],
+                              )
+                                  : null,
+                              color: isSelected ? null : _white,
+                              borderRadius: BorderRadius.circular(30),
+                              border: isSelected
+                                  ? null
+                                  : Border.all(color: Colors.grey[300]!, width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isSelected
+                                      ? _primaryColor.withOpacity(0.3)
+                                      : Colors.grey.withOpacity(0.1),
+                                  blurRadius: isSelected ? 8 : 4,
+                                  offset: Offset(0, isSelected ? 2 : 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _getSubCategoryIcon(subCategory),
+                                  size: isDesktop ? 18 : (isTablet ? 16 : 14),
+                                  color: isSelected ? _white : _primaryColor,
+                                ),
+                                SizedBox(width: spacing * 0.4),
+                                Text(
+                                  subCategory,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                    color: isSelected ? _white : _textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Products Grid with Animation
+                  Expanded(
+                    child: _selectedSubCategory == null
+                        ? Center(
+                      child: CircularProgressIndicator(
+                        color: _primaryColor,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: _buildProductsGrid(
+                        categories[_selectedCategoryIndex!]["name"],
+                        _selectedSubCategory!,
+                        crossAxisCount,
+                        productAspectRatio,
+                        spacing,
+                        isDesktop,
+                        isTablet,
+                        isLargeDesktop,
+                        productProvider.products, // Pass real products from provider
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // Enhanced empty state with featured categories
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(spacing * 2),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(isDesktop ? 40 : (isTablet ? 35 : 30)),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [_primaryColor.withOpacity(0.1), _secondaryColor.withOpacity(0.1)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.category_outlined,
+                                size: isDesktop ? 80 : (isTablet ? 70 : 60),
+                                color: _primaryColor,
+                              ),
+                            ),
+                            SizedBox(height: spacing * 2),
+                            Text(
+                              "Browse Categories",
+                              style: GoogleFonts.poppins(
+                                fontSize: isDesktop ? 32 : (isTablet ? 28 : 24),
+                                fontWeight: FontWeight.w700,
+                                color: _textPrimary,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            SizedBox(height: spacing * 0.75),
+                            Text(
+                              "Select a category to explore amazing products",
+                              style: GoogleFonts.poppins(
+                                fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                                color: _textSecondary,
+                              ),
+                            ),
+                            SizedBox(height: spacing * 3),
+
+                            // Popular Categories Preview
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: spacing),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Popular Categories",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                                          fontWeight: FontWeight.w600,
+                                          color: _textPrimary,
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {},
+                                        child: Text(
+                                          "View All",
+                                          style: GoogleFonts.poppins(
+                                            color: _primaryColor,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: spacing),
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: isDesktop ? 6 : (isTablet ? 4 : 3),
+                                      childAspectRatio: 0.9,
+                                      crossAxisSpacing: spacing * 0.75,
+                                      mainAxisSpacing: spacing * 0.75,
+                                    ),
+                                    itemCount: 6,
+                                    itemBuilder: (context, index) {
+                                      return GestureDetector(
+                                        onTap: () => _selectCategory(index),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: _white,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: Colors.grey[200]!),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                                                decoration: BoxDecoration(
+                                                  color: _accentLight,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  categories[index]["icon"],
+                                                  size: isDesktop ? 28 : (isTablet ? 24 : 20),
+                                                  color: _primaryColor,
+                                                ),
+                                              ),
+                                              SizedBox(height: spacing * 0.5),
+                                              Text(
+                                                categories[index]["name"],
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
+                                                  fontWeight: FontWeight.w500,
+                                                  color: _textPrimary,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  // Helper method to build products grid
+  // Helper method to build products grid - UPDATED to accept real products
   Widget _buildProductsGrid(
       String categoryName,
       String subCategory,
@@ -611,21 +613,32 @@ class _CategoriesScreenState extends State<CategoriesScreen>
       bool isDesktop,
       bool isTablet,
       bool isLargeDesktop,
+      List<Product> allProducts, // Added parameter for real products
       ) {
-    // Sample products - replace with your actual product data
-    List<Product> products = List.generate(8, (index) {
+    // Filter products by category
+    List<Product> categoryProducts = allProducts
+        .where((p) => p.category == categoryName)
+        .toList();
+
+    // If no real products, use dummy data
+    List<Product> displayProducts = categoryProducts.isEmpty
+        ? List.generate(8, (index) {
       return Product(
         id: "$categoryName-$subCategory-$index",
         title: "$categoryName ${subCategory == "All" ? "Product" : subCategory} ${index + 1}",
+        description:
+        "This is a sample product description for $categoryName in $subCategory category.",
         price: (index + 1) * 29.99,
-        description: "This is a sample product description for $categoryName in $subCategory category.",
+        images: [], // Added required images list
         category: categoryName,
-        imageUrl: "assets/images/product_placeholder.png",
-        image: '',
+        stock: 10, // Added required stock
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
-    });
+    })
+        : categoryProducts;
 
-    return products.isEmpty
+    return displayProducts.isEmpty
         ? Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -670,12 +683,12 @@ class _CategoriesScreenState extends State<CategoriesScreen>
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
       ),
-      itemCount: products.length,
+      itemCount: displayProducts.length,
       itemBuilder: (context, index) {
-        final product = products[index];
+        final product = displayProducts[index];
         final discount = index % 3 == 0 ? 20.0 : (index % 5 == 0 ? 15.0 : null);
         return ProductCard(
-          product: product,
+          product: product, // FIXED: Passing single product, not list
           discountPercentage: discount,
           onAddToCart: () {
             ScaffoldMessenger.of(context).showSnackBar(

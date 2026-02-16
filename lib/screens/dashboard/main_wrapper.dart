@@ -392,7 +392,7 @@ class _MainWrapperState extends State<MainWrapper> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const CartScreen(),
+                                    builder: (context) =>  CartScreen(),
                                   ),
                                 ).then((value) {
                                   if (value != null && value is int) {

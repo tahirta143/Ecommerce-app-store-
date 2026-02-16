@@ -1,10 +1,25 @@
-import 'package:ecommerce_app/providers/cart_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+
+// Move CartItem outside the CartScreen class
+class CartItem {
+  final String id;
+  final String title;
+  final double price;
+  final String? image;
+  final int quantity;
+
+  CartItem({
+    required this.id,
+    required this.title,
+    required this.price,
+    this.image,
+    this.quantity = 1,
+  });
+}
 
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key});
+   CartScreen({super.key});
 
   // Single cohesive color theme - Professional Indigo/Purple mix
   static const Color _primaryColor = Color(0xFF6366F1); // Indigo
@@ -16,16 +31,35 @@ class CartScreen extends StatelessWidget {
   static const Color _accentLight = Color(0xFFEEF2FF); // Light indigo for backgrounds
   static const Color _successColor = Color(0xFF10B981); // Green for success states
 
+  // Sample cart data for UI demonstration
+  final List<CartItem> _cartItems = [
+    CartItem(
+      id: '1',
+      title: 'Modern Dresses for Girls',
+      price: 2500,
+      quantity: 2,
+    ),
+    CartItem(
+      id: '2',
+      title: 'Beauty Products for Women',
+      price: 2000,
+      quantity: 1,
+    ),
+    CartItem(
+      id: '3',
+      title: 'iPhone 14 Pro',
+      price: 20455,
+      quantity: 1,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
-
     // MediaQuery for responsive sizing
     final size = MediaQuery.of(context).size;
     final isTablet = size.width >= 600;
     final isDesktop = size.width >= 900;
     final isLargeDesktop = size.width >= 1200;
-    final padding = MediaQuery.of(context).padding;
 
     return Scaffold(
       backgroundColor: _surfaceColor,
@@ -33,7 +67,7 @@ class CartScreen extends StatelessWidget {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios,
-            color: _white, // White back button
+            color: _white,
             size: isDesktop ? 24 : (isTablet ? 22 : 20),
           ),
           onPressed: () => Navigator.pop(context),
@@ -51,9 +85,9 @@ class CartScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: false,
         actions: [
-          if (cart.items.isNotEmpty)
+          if (_cartItems.isNotEmpty)
             TextButton.icon(
-              onPressed: () => _showClearCartDialog(context, cart),
+              onPressed: () => _showClearCartDialog(context),
               icon: Icon(
                 Icons.delete_outline,
                 size: isDesktop ? 22 : (isTablet ? 20 : 18),
@@ -68,18 +102,18 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
             ),
-          SizedBox(width: isDesktop ? 12 : (isTablet ? 10 : 8)),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: cart.items.isEmpty
+            child: _cartItems.isEmpty
                 ? _buildEmptyCart(context, isDesktop, isTablet, isLargeDesktop)
-                : _buildCartItems(context, cart, isDesktop, isTablet, isLargeDesktop),
+                : _buildCartItems(context, isDesktop, isTablet, isLargeDesktop),
           ),
-          if (cart.items.isNotEmpty)
-            _buildCheckoutSection(context, cart, isDesktop, isTablet, isLargeDesktop),
+          if (_cartItems.isNotEmpty)
+            _buildCheckoutSection(context, isDesktop, isTablet, isLargeDesktop),
         ],
       ),
     );
@@ -91,8 +125,6 @@ class CartScreen extends StatelessWidget {
       bool isTablet,
       bool isLargeDesktop,
       ) {
-    final size = MediaQuery.of(context).size;
-
     return Center(
       child: SingleChildScrollView(
         padding: EdgeInsets.all(isLargeDesktop ? 32 : (isDesktop ? 28 : (isTablet ? 24 : 20))),
@@ -162,13 +194,10 @@ class CartScreen extends StatelessWidget {
 
   Widget _buildCartItems(
       BuildContext context,
-      CartProvider cart,
       bool isDesktop,
       bool isTablet,
       bool isLargeDesktop,
       ) {
-    final size = MediaQuery.of(context).size;
-
     return Container(
       padding: EdgeInsets.all(isLargeDesktop ? 24 : (isDesktop ? 20 : (isTablet ? 18 : 16))),
       child: Column(
@@ -196,7 +225,7 @@ class CartScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(isLargeDesktop ? 24 : (isDesktop ? 20 : (isTablet ? 18 : 16))),
                 ),
                 child: Text(
-                  "${cart.items.length} ${cart.items.length == 1 ? 'item' : 'items'}",
+                  "${_cartItems.length} ${_cartItems.length == 1 ? 'item' : 'items'}",
                   style: GoogleFonts.poppins(
                     color: _primaryColor,
                     fontWeight: FontWeight.w600,
@@ -211,17 +240,14 @@ class CartScreen extends StatelessWidget {
           // Cart items list
           Expanded(
             child: ListView.builder(
-              itemCount: cart.items.length,
+              itemCount: _cartItems.length,
               physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
-                final cartItem = cart.items.values.toList()[index];
-                final productId = cart.items.keys.toList()[index];
-
+                final cartItem = _cartItems[index];
                 return _buildCartItemCard(
                   context,
-                  cart,
-                  productId,
                   cartItem,
+                  index,
                   isDesktop,
                   isTablet,
                   isLargeDesktop,
@@ -236,15 +262,12 @@ class CartScreen extends StatelessWidget {
 
   Widget _buildCartItemCard(
       BuildContext context,
-      CartProvider cart,
-      String productId,
-      dynamic cartItem,
+      CartItem cartItem,
+      int index,
       bool isDesktop,
       bool isTablet,
       bool isLargeDesktop,
       ) {
-    final size = MediaQuery.of(context).size;
-
     return Container(
       margin: EdgeInsets.only(bottom: isLargeDesktop ? 20 : (isDesktop ? 16 : (isTablet ? 14 : 12))),
       decoration: BoxDecoration(
@@ -273,11 +296,11 @@ class CartScreen extends StatelessWidget {
                 border: Border.all(color: Colors.grey[100]!),
               ),
               child: Center(
-                child: cartItem.image != null && cartItem.image.isNotEmpty
+                child: cartItem.image != null && cartItem.image!.isNotEmpty
                     ? ClipRRect(
                   borderRadius: BorderRadius.circular(isLargeDesktop ? 22 : (isDesktop ? 18 : (isTablet ? 16 : 14))),
                   child: Image.network(
-                    cartItem.image,
+                    cartItem.image!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return _buildProductPlaceholder(isDesktop, isTablet, isLargeDesktop);
@@ -311,7 +334,7 @@ class CartScreen extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => _showRemoveItemDialog(context, cart, productId, cartItem.title),
+                        onPressed: () => _showRemoveItemDialog(context, cartItem.title),
                         icon: Icon(
                           Icons.close,
                           size: isLargeDesktop ? 24 : (isDesktop ? 22 : (isTablet ? 20 : 18)),
@@ -326,7 +349,7 @@ class CartScreen extends StatelessWidget {
 
                   // Price
                   Text(
-                    "\$${(cartItem.price).toStringAsFixed(2)}",
+                    "\$${cartItem.price.toStringAsFixed(2)}",
                     style: GoogleFonts.poppins(
                       fontSize: isLargeDesktop ? 24 : (isDesktop ? 20 : (isTablet ? 18 : 16)),
                       fontWeight: FontWeight.w700,
@@ -351,11 +374,7 @@ class CartScreen extends StatelessWidget {
                           children: [
                             _buildQuantityButton(
                               icon: Icons.remove,
-                              onPressed: () {
-                                if (cartItem.quantity > 1) {
-                                  cart.removeSingleItem(productId);
-                                }
-                              },
+                              onPressed: () {},
                               isDesktop: isDesktop,
                               isTablet: isTablet,
                               isLargeDesktop: isLargeDesktop,
@@ -375,14 +394,7 @@ class CartScreen extends StatelessWidget {
                             ),
                             _buildQuantityButton(
                               icon: Icons.add,
-                              onPressed: () {
-                                cart.addItem(
-                                  productId,
-                                  cartItem.price,
-                                  cartItem.title,
-                                  cartItem.image,
-                                );
-                              },
+                              onPressed: () {},
                               isDesktop: isDesktop,
                               isTablet: isTablet,
                               isLargeDesktop: isLargeDesktop,
@@ -467,18 +479,15 @@ class CartScreen extends StatelessWidget {
 
   Widget _buildCheckoutSection(
       BuildContext context,
-      CartProvider cart,
       bool isDesktop,
       bool isTablet,
       bool isLargeDesktop,
       ) {
-    // Calculate totals
-    final subtotal = cart.totalAmount;
+    // Calculate totals from sample data
+    final subtotal = _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
     final shipping = subtotal > 100 ? 0.0 : 10.0;
     final tax = subtotal * 0.1; // 10% tax
     final total = subtotal + shipping + tax;
-
-    final size = MediaQuery.of(context).size;
 
     return Container(
       padding: EdgeInsets.all(isLargeDesktop ? 40 : (isDesktop ? 32 : (isTablet ? 28 : 24))),
@@ -608,12 +617,11 @@ class CartScreen extends StatelessWidget {
             width: double.infinity,
             height: isLargeDesktop ? 76 : (isDesktop ? 64 : (isTablet ? 60 : 56)),
             child: ElevatedButton(
-              onPressed: cart.items.isEmpty ? null : () => _showCheckoutDialog(context, cart, total),
+              onPressed: () => _showCheckoutDialog(context, total),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: _white,
                 elevation: 0,
-                disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(isLargeDesktop ? 24 : (isDesktop ? 20 : (isTablet ? 18 : 16))),
                 ),
@@ -664,7 +672,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showClearCartDialog(BuildContext context, CartProvider cart) async {
+  Future<void> _showClearCartDialog(BuildContext context) async {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width >= 600;
     final isDesktop = size.width >= 900;
@@ -721,13 +729,7 @@ class CartScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              final productIds = cart.items.keys.toList();
-              for (var productId in productIds) {
-                cart.removeItem(productId);
-              }
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryColor,
               foregroundColor: _white,
@@ -751,8 +753,6 @@ class CartScreen extends StatelessWidget {
 
   Future<void> _showRemoveItemDialog(
       BuildContext context,
-      CartProvider cart,
-      String productId,
       String productTitle,
       ) async {
     final size = MediaQuery.of(context).size;
@@ -811,10 +811,7 @@ class CartScreen extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              cart.removeItem(productId);
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryColor,
               foregroundColor: _white,
@@ -836,7 +833,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showCheckoutDialog(BuildContext context, CartProvider cart, double total) async {
+  Future<void> _showCheckoutDialog(BuildContext context, double total) async {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width >= 600;
     final isDesktop = size.width >= 900;
@@ -884,7 +881,7 @@ class CartScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: isDesktop ? 20 : (isTablet ? 18 : 16)),
+            const SizedBox(height: 16),
             Container(
               padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 18 : 16)),
               decoration: BoxDecoration(
@@ -918,10 +915,6 @@ class CartScreen extends StatelessWidget {
         actions: [
           ElevatedButton(
             onPressed: () {
-              final productIds = cart.items.keys.toList();
-              for (var productId in productIds) {
-                cart.removeItem(productId);
-              }
               Navigator.popUntil(context, (route) => route.isFirst);
             },
             style: ElevatedButton.styleFrom(

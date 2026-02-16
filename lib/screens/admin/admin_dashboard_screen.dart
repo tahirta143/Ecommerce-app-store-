@@ -23,8 +23,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     const admin_summary_view(),
     const AdminProductsScreen(),
     const AdminCategoriesScreen(),
-    const AdminOrdersScreen(),
-     const AdminUsersScreen(),
+    AdminOrdersScreen(),
+      AdminUsersScreen(),
   ];
 
   final List<String> _titles = [
