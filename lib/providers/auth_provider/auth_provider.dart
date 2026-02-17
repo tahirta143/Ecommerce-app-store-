@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,186 +13,181 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   bool _isInitialized = false;
 
-  // API URLs
   static const String baseUrl = 'https://backend-with-node-js-ueii.onrender.com/api';
-  static const String userLoginUrl = '$baseUrl/auth/login';
+  static const String userLoginUrl  = '$baseUrl/auth/login';
   static const String adminLoginUrl = '$baseUrl/admin/login';
 
   // Getters
-  User? get currentUser => _currentUser;
-  String? get token => _token;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get isAdmin => _currentUser?.role == UserRole.admin;
-  bool get isLoggedIn => _currentUser != null;
-  bool get isInitialized => _isInitialized;
+  User?   get currentUser   => _currentUser;
+  String? get token         => _token;
+  bool    get isLoading     => _isLoading;
+  String? get errorMessage  => _errorMessage;
+  bool    get isAdmin       => _currentUser?.role == UserRole.admin;
+  bool    get isLoggedIn    => _currentUser != null && _token != null;
+  bool    get isInitialized => _isInitialized;
 
   AuthProvider() {
     _init();
   }
 
+  // ─── Safe notify ────────────────────────────────────────────────────────────
+  /// Defers notifyListeners if called during a build/layout phase.
+  void _safeNotify() {
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    } else {
+      notifyListeners();
+    }
+  }
+
+  // ─── Init ────────────────────────────────────────────────────────────────────
   Future<void> _init() async {
     await loadUserFromStorage();
     _isInitialized = true;
-    notifyListeners();
+    _safeNotify();
   }
 
-  // Login method that handles both admin and user login
+  // ─── Login ──────────────────────────────────────────────────────────────────
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
 
     try {
-      // First try admin login
-      print('Attempting admin login first...');
-      final adminResponse = await _attemptLogin(
-        adminLoginUrl,
-        email,
-        password,
-      );
-
+      // Try admin login first
+      final adminResponse = await _attemptLogin(adminLoginUrl, email, password);
       if (adminResponse != null && adminResponse['success'] == true) {
-        print('Admin login successful');
         _processAdminLoginResponse(adminResponse);
         return true;
       }
 
-      // If admin login fails, try user login
-      print('Admin login failed, attempting user login...');
-      final userResponse = await _attemptLogin(
-        userLoginUrl,
-        email,
-        password,
-      );
-
+      // Fall back to user login
+      final userResponse = await _attemptLogin(userLoginUrl, email, password);
       if (userResponse != null && userResponse['success'] == true) {
-        print('User login successful');
         _processUserLoginResponse(userResponse);
         return true;
       }
 
-      // Both login attempts failed
-      print('Both login attempts failed');
       _errorMessage = 'Invalid email or password';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
       return false;
 
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       _errorMessage = 'Network error: ${e.toString()}';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
       return false;
     }
   }
 
-  // Helper method to attempt login
+  // ─── Attempt login helper ───────────────────────────────────────────────────
   Future<Map<String, dynamic>?> _attemptLogin(
-      String url,
-      String email,
-      String password,
-      ) async {
+      String url, String email, String password) async {
     try {
-      print('Attempting login to: $url');
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
+        body: json.encode({'email': email, 'password': password}),
       ).timeout(const Duration(seconds: 10));
 
-      print('Response status: ${response.statusCode}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        print('Response data: $responseData');
-        return responseData;
-      } else {
-        print('Login failed with status: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        return null;
+        return json.decode(response.body) as Map<String, dynamic>;
       }
+      return null;
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('_attemptLogin error ($url): $e');
       return null;
     }
   }
 
-  // Process user login response
+  // ─── Process responses ───────────────────────────────────────────────────────
   void _processUserLoginResponse(Map<String, dynamic> response) {
     try {
-      _token = response['token'];
-      _currentUser = User.fromNonAdminJson(response['user']);
-      print('User role set to: ${_currentUser?.role}');
-      _isLoading = false;
+      _token       = response['token'] as String?;
+      _currentUser = User.fromNonAdminJson(response['user'] as Map<String, dynamic>);
+      _isLoading   = false;
       _saveUserToStorage();
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
-      print('Error processing user login response: $e');
+      debugPrint('Error processing user login: $e');
       _errorMessage = 'Error processing login response';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
-  // Process admin login response
   void _processAdminLoginResponse(Map<String, dynamic> response) {
     try {
-      _token = response['data']['token'];
-      _currentUser = User.fromAdminJson(response['data']['admin']);
-      print('Admin role set to: ${_currentUser?.role}');
-      _isLoading = false;
+      final data   = response['data'] as Map<String, dynamic>;
+      _token       = data['token'] as String?;
+      _currentUser = User.fromAdminJson(data['admin'] as Map<String, dynamic>);
+      _isLoading   = false;
       _saveUserToStorage();
-      notifyListeners();
+      _safeNotify();
     } catch (e) {
-      print('Error processing admin login response: $e');
+      debugPrint('Error processing admin login: $e');
       _errorMessage = 'Error processing login response';
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
-  // Logout method
+  // ─── Logout ──────────────────────────────────────────────────────────────────
   Future<void> logout() async {
     _currentUser = null;
-    _token = null;
+    _token       = null;
     await _clearStorage();
-    notifyListeners();
+    _safeNotify();
   }
 
-  // Storage methods
+  // ─── Storage ─────────────────────────────────────────────────────────────────
+
+  /// Saves both token and user (with role) to SharedPreferences.
   Future<void> _saveUserToStorage() async {
     try {
+      if (_currentUser == null || _token == null) return;
       final prefs = await SharedPreferences.getInstance();
-      if (_currentUser != null && _token != null) {
-        await prefs.setString('user', json.encode(_currentUser!.toJson()));
-        await prefs.setString('token', _token!);
-        print('User saved to storage with role: ${_currentUser!.role}');
-      }
+      await prefs.setString('token', _token!);
+      await prefs.setString('user',  json.encode(_currentUser!.toJson()));
+      debugPrint('Saved user role: ${_currentUser!.role}');
     } catch (e) {
-      print('Error saving user to storage: $e');
+      debugPrint('Error saving user: $e');
     }
   }
 
+  /// Loads user + token. Only considers the user "logged in" if BOTH exist
+  /// AND the User object deserialises correctly (non-null id).
   Future<void> loadUserFromStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userString = prefs.getString('user');
+      final prefs       = await SharedPreferences.getInstance();
       final tokenString = prefs.getString('token');
+      final userString  = prefs.getString('user');
 
-      if (userString != null && tokenString != null) {
-        final userMap = json.decode(userString);
-        _currentUser = User.fromJson(userMap);
-        _token = tokenString;
-        print('User loaded from storage with role: ${_currentUser?.role}');
-        notifyListeners();
+      if (tokenString == null || userString == null) {
+        debugPrint('No stored session found.');
+        return;
       }
+
+      final userMap = json.decode(userString) as Map<String, dynamic>;
+      final restoredUser = User.fromJson(userMap);
+
+      // Guard: if id is empty the JSON was malformed — clear storage
+      if (restoredUser.id.isEmpty) {
+        debugPrint('Stored user JSON is malformed, clearing session.');
+        await _clearStorage();
+        return;
+      }
+
+      _token       = tokenString;
+      _currentUser = restoredUser;
+      debugPrint('Restored session for role: ${_currentUser?.role}');
     } catch (e) {
-      print('Error loading user from storage: $e');
+      debugPrint('Error loading user from storage: $e');
+      // If anything went wrong, wipe the broken session data
+      await _clearStorage();
     }
   }
 
@@ -202,13 +197,13 @@ class AuthProvider extends ChangeNotifier {
       await prefs.remove('user');
       await prefs.remove('token');
     } catch (e) {
-      print('Error clearing storage: $e');
+      debugPrint('Error clearing storage: $e');
     }
   }
 
-  // Clear error message
+  // ─── Misc ────────────────────────────────────────────────────────────────────
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
   }
 }

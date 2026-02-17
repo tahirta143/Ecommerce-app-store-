@@ -1,4 +1,4 @@
-import 'package:ecommerce_app/models/products_model/products_model.dart'; // Use new model
+import 'package:ecommerce_app/models/products_model/products_model.dart';
 import 'package:ecommerce_app/widgets/product_card.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,28 +15,36 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  List<String> _categories = ["All"]; // Will be populated from API
+  List<String> _categories = ["All"];
   late String _selectedCategory;
 
-  // Search functionality variables
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+
   String _searchQuery = "";
   bool _isSearching = false;
 
-  // Single cohesive color theme - Professional Indigo/Purple mix
-  static const Color _primaryColor = Color(0xFF6366F1); // Indigo
-  static const Color _secondaryColor = Color(0xFF8B5CF6); // Purple accent
-  static const Color _surfaceColor = Color(0xFFF8FAFC); // Light background
-  static const Color _textPrimary = Color(0xFF1E293B);
-  static const Color _textSecondary = Color(0xFF64748B);
-  static const Color _white = Color(0xFFFFFFFF);
+  // ─── Theme ────────────────────────────────────────────────────────────────
+  static const Color _primaryColor   = Color(0xFF6366F1);
+  static const Color _secondaryColor = Color(0xFF8B5CF6);
+  static const Color _surfaceColor   = Color(0xFFF8FAFC);
+  static const Color _textPrimary    = Color(0xFF1E293B);
+  static const Color _textSecondary  = Color(0xFF64748B);
+  static const Color _white          = Color(0xFFFFFFFF);
 
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _selectedCategory = widget.activeCategory;
     _searchController.addListener(_onSearchChanged);
+    _scrollController.addListener(_onScroll);
+
+    // Fetch products after first frame so provider is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().fetchProducts(refresh: true);
+    });
   }
 
   @override
@@ -44,20 +52,30 @@ class _ShopScreenState extends State<ShopScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
+  // ─── Scroll pagination ────────────────────────────────────────────────────
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<ProductProvider>();
+      if (!provider.isLoading && provider.hasMorePages) {
+        provider.fetchProducts(); // load next page
+      }
+    }
+  }
+
+  // ─── Search ───────────────────────────────────────────────────────────────
   void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text;
-    });
+    setState(() => _searchQuery = _searchController.text);
   }
 
   void _clearSearch() {
     _searchController.clear();
-    setState(() {
-      _searchQuery = "";
-    });
+    setState(() => _searchQuery = "");
   }
 
   void _toggleSearch() {
@@ -72,230 +90,122 @@ class _ShopScreenState extends State<ShopScreen> {
     });
   }
 
+  // ─── Category extraction ──────────────────────────────────────────────────
+  /// Rebuilds the category list whenever the product list changes.
+  /// Uses a Set comparison so it only calls setState when something actually
+  /// changed (avoids infinite rebuild loops).
+  void _syncCategories(List<Product> products) {
+    if (products.isEmpty) return;
+
+    final freshSet = <String>{};
+    for (final p in products) {
+      if (p.category.isNotEmpty) freshSet.add(p.category);
+    }
+    final freshList = ["All", ...freshSet.toList()..sort()];
+
+    // Only rebuild if the list actually changed
+    if (freshList.length != _categories.length ||
+        !freshList.every(_categories.contains)) {
+      // Use Future.microtask so we don't call setState during build
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _categories = freshList;
+            // If the previously selected category no longer exists, reset
+            if (!_categories.contains(_selectedCategory)) {
+              _selectedCategory = "All";
+            }
+          });
+        }
+      });
+    }
+  }
+
+  // ─── Filtering ────────────────────────────────────────────────────────────
   List<Product> _getFilteredProducts(List<Product> allProducts) {
-    // First filter by category
-    List<Product> categoryFiltered = _selectedCategory == "All"
+    var result = _selectedCategory == "All"
         ? allProducts
-        : allProducts
-        .where((product) => product.category == _selectedCategory)
-        .toList();
+        : allProducts.where((p) => p.category == _selectedCategory).toList();
 
-    // Then filter by search query
-    if (_searchQuery.isEmpty) {
-      return categoryFiltered;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      result = result
+          .where((p) =>
+      p.title.toLowerCase().contains(q) ||
+          p.description.toLowerCase().contains(q) ||
+          p.category.toLowerCase().contains(q))
+          .toList();
     }
-
-    return categoryFiltered
-        .where((product) =>
-    product.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    return result;
   }
 
-  // Update categories when products are loaded
-  void _updateCategories(List<Product> products) {
-    if (products.isNotEmpty) {
-      final categorySet = <String>{};
-      for (var product in products) {
-        categorySet.add(product.category);
-      }
-      final newCategories = ["All", ...categorySet.toList()..sort()];
-      if (_categories.length != newCategories.length) {
-        setState(() {
-          _categories = newCategories;
-        });
-      }
-    }
-  }
+  // ─── Responsive helpers ───────────────────────────────────────────────────
+  double _getTitleSize(Size s)            => s.width >= 1200 ? 36 : s.width >= 900 ? 32 : s.width >= 600 ? 30 : 28;
+  double _getSubtitleSize(Size s)         => s.width >= 1200 ? 18 : s.width >= 900 ? 16 : s.width >= 600 ? 15 : 14;
+  double _getCategoryChipFontSize(Size s) => s.width >= 1200 ? 16 : s.width >= 900 ? 15 : s.width >= 600 ? 14.5 : 14;
+  double _getProductCountSize(Size s)     => s.width >= 1200 ? 16 : s.width >= 900 ? 15 : s.width >= 600 ? 14.5 : 14;
+  double _getFilterIconSize(Size s)       => s.width >= 1200 ? 20 : s.width >= 900 ? 18 : s.width >= 600 ? 17 : 16;
+  double _getFilterTextSize(Size s)       => s.width >= 1200 ? 14 : s.width >= 900 ? 13 : s.width >= 600 ? 12.5 : 12;
+  double _getEmptyStateIconSize(Size s)   => s.width >= 1200 ? 120 : s.width >= 900 ? 100 : s.width >= 600 ? 90 : 80;
+  double _getEmptyStateTitleSize(Size s)  => s.width >= 1200 ? 24 : s.width >= 900 ? 22 : s.width >= 600 ? 20 : 18;
+  double _getEmptyStateTextSize(Size s)   => s.width >= 1200 ? 18 : s.width >= 900 ? 16 : s.width >= 600 ? 15 : 14;
+  double _getButtonSize(Size s)           => s.width >= 1200 ? 56 : s.width >= 900 ? 52 : s.width >= 600 ? 48 : 44;
+  double _getButtonFontSize(Size s)       => s.width >= 1200 ? 18 : s.width >= 900 ? 16 : s.width >= 600 ? 15 : 14;
+  double _getSearchBarHeight(Size s)      => s.width >= 1200 ? 56 : s.width >= 900 ? 52 : s.width >= 600 ? 48 : 44;
+  double _getSearchIconSize(Size s)       => s.width >= 1200 ? 28 : s.width >= 900 ? 26 : s.width >= 600 ? 24 : 22;
+  double _getSearchButtonSize(Size s)     => s.width >= 1200 ? 56 : s.width >= 900 ? 52 : s.width >= 600 ? 48 : 44;
+  double _getCategoryChipHeight(Size s)   => s.width >= 1200 ? 70 : s.width >= 900 ? 65 : s.width >= 600 ? 62 : 60;
+  double _getCategoryChipPadding(Size s)  => s.width >= 1200 ? 24 : s.width >= 900 ? 22 : s.width >= 600 ? 20 : 16;
+  double _getGridSpacing(Size s)          => s.width >= 1200 ? 24 : s.width >= 900 ? 20 : s.width >= 600 ? 18 : 16;
+  int    _getGridCrossAxisCount(Size s)   => s.width >= 1200 ? 4 : s.width >= 900 ? 3 : 2;
+  double _getGridChildAspectRatio(Size s) => s.width >= 1200 ? 0.68 : s.width >= 900 ? 0.7 : 0.72;
+  EdgeInsets _getMainPadding(Size s)      => s.width >= 1200
+      ? const EdgeInsets.fromLTRB(24, 24, 24, 12)
+      : s.width >= 900
+      ? const EdgeInsets.fromLTRB(20, 20, 20, 10)
+      : s.width >= 600
+      ? const EdgeInsets.fromLTRB(18, 18, 18, 9)
+      : const EdgeInsets.fromLTRB(16, 16, 16, 8);
 
-  // Responsive sizing methods (keeping all your existing responsive methods)
-  double _getTitleSize(Size size) {
-    if (size.width >= 1200) return 36;
-    if (size.width >= 900) return 32;
-    if (size.width >= 600) return 30;
-    return 28;
-  }
-
-  double _getSubtitleSize(Size size) {
-    if (size.width >= 1200) return 18;
-    if (size.width >= 900) return 16;
-    if (size.width >= 600) return 15;
-    return 14;
-  }
-
-  double _getCategoryChipFontSize(Size size) {
-    if (size.width >= 1200) return 16;
-    if (size.width >= 900) return 15;
-    if (size.width >= 600) return 14.5;
-    return 14;
-  }
-
-  double _getProductCountSize(Size size) {
-    if (size.width >= 1200) return 16;
-    if (size.width >= 900) return 15;
-    if (size.width >= 600) return 14.5;
-    return 14;
-  }
-
-  double _getFilterIconSize(Size size) {
-    if (size.width >= 1200) return 20;
-    if (size.width >= 900) return 18;
-    if (size.width >= 600) return 17;
-    return 16;
-  }
-
-  double _getFilterTextSize(Size size) {
-    if (size.width >= 1200) return 14;
-    if (size.width >= 900) return 13;
-    if (size.width >= 600) return 12.5;
-    return 12;
-  }
-
-  double _getEmptyStateIconSize(Size size) {
-    if (size.width >= 1200) return 120;
-    if (size.width >= 900) return 100;
-    if (size.width >= 600) return 90;
-    return 80;
-  }
-
-  double _getEmptyStateTitleSize(Size size) {
-    if (size.width >= 1200) return 24;
-    if (size.width >= 900) return 22;
-    if (size.width >= 600) return 20;
-    return 18;
-  }
-
-  double _getEmptyStateTextSize(Size size) {
-    if (size.width >= 1200) return 18;
-    if (size.width >= 900) return 16;
-    if (size.width >= 600) return 15;
-    return 14;
-  }
-
-  double _getButtonSize(Size size) {
-    if (size.width >= 1200) return 56;
-    if (size.width >= 900) return 52;
-    if (size.width >= 600) return 48;
-    return 44;
-  }
-
-  double _getButtonFontSize(Size size) {
-    if (size.width >= 1200) return 18;
-    if (size.width >= 900) return 16;
-    if (size.width >= 600) return 15;
-    return 14;
-  }
-
-  double _getSearchBarHeight(Size size) {
-    if (size.width >= 1200) return 56;
-    if (size.width >= 900) return 52;
-    if (size.width >= 600) return 48;
-    return 44;
-  }
-
-  double _getSearchIconSize(Size size) {
-    if (size.width >= 1200) return 28;
-    if (size.width >= 900) return 26;
-    if (size.width >= 600) return 24;
-    return 22;
-  }
-
-  double _getSearchButtonSize(Size size) {
-    if (size.width >= 1200) return 56;
-    if (size.width >= 900) return 52;
-    if (size.width >= 600) return 48;
-    return 44;
-  }
-
-  double _getCategoryChipHeight(Size size) {
-    if (size.width >= 1200) return 70;
-    if (size.width >= 900) return 65;
-    if (size.width >= 600) return 62;
-    return 60;
-  }
-
-  double _getCategoryChipPadding(Size size) {
-    if (size.width >= 1200) return 24;
-    if (size.width >= 900) return 22;
-    if (size.width >= 600) return 20;
-    return 16;
-  }
-
-  double _getGridSpacing(Size size) {
-    if (size.width >= 1200) return 24;
-    if (size.width >= 900) return 20;
-    if (size.width >= 600) return 18;
-    return 16;
-  }
-
-  int _getGridCrossAxisCount(Size size) {
-    if (size.width >= 1200) return 4;
-    if (size.width >= 900) return 3;
-    if (size.width >= 600) return 2;
-    return 2;
-  }
-
-  double _getGridChildAspectRatio(Size size) {
-    if (size.width >= 1200) return 0.68;
-    if (size.width >= 900) return 0.7;
-    if (size.width >= 600) return 0.72;
-    return 0.72;
-  }
-
-  EdgeInsets _getMainPadding(Size size) {
-    if (size.width >= 1200) {
-      return const EdgeInsets.fromLTRB(24, 24, 24, 12);
-    }
-    if (size.width >= 900) {
-      return const EdgeInsets.fromLTRB(20, 20, 20, 10);
-    }
-    if (size.width >= 600) {
-      return const EdgeInsets.fromLTRB(18, 18, 18, 9);
-    }
-    return const EdgeInsets.fromLTRB(16, 16, 16, 8);
-  }
-
+  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    final titleSize = _getTitleSize(size);
-    final subtitleSize = _getSubtitleSize(size);
+    final titleSize            = _getTitleSize(size);
+    final subtitleSize         = _getSubtitleSize(size);
     final categoryChipFontSize = _getCategoryChipFontSize(size);
-    final productCountSize = _getProductCountSize(size);
-    final filterIconSize = _getFilterIconSize(size);
-    final filterTextSize = _getFilterTextSize(size);
-    final emptyStateIconSize = _getEmptyStateIconSize(size);
-    final emptyStateTitleSize = _getEmptyStateTitleSize(size);
-    final emptyStateTextSize = _getEmptyStateTextSize(size);
-    final buttonSize = _getButtonSize(size);
-    final buttonFontSize = _getButtonFontSize(size);
-    final searchBarHeight = _getSearchBarHeight(size);
-    final searchIconSize = _getSearchIconSize(size);
-    final searchButtonSize = _getSearchButtonSize(size);
-    final categoryChipHeight = _getCategoryChipHeight(size);
-    final categoryChipPadding = _getCategoryChipPadding(size);
-    final gridSpacing = _getGridSpacing(size);
-    final crossAxisCount = _getGridCrossAxisCount(size);
-    final childAspectRatio = _getGridChildAspectRatio(size);
-    final mainPadding = _getMainPadding(size);
+    final productCountSize     = _getProductCountSize(size);
+    final filterIconSize       = _getFilterIconSize(size);
+    final filterTextSize       = _getFilterTextSize(size);
+    final emptyStateIconSize   = _getEmptyStateIconSize(size);
+    final emptyStateTitleSize  = _getEmptyStateTitleSize(size);
+    final emptyStateTextSize   = _getEmptyStateTextSize(size);
+    final buttonSize           = _getButtonSize(size);
+    final buttonFontSize       = _getButtonFontSize(size);
+    final searchBarHeight      = _getSearchBarHeight(size);
+    final searchIconSize       = _getSearchIconSize(size);
+    final searchButtonSize     = _getSearchButtonSize(size);
+    final categoryChipHeight   = _getCategoryChipHeight(size);
+    final categoryChipPadding  = _getCategoryChipPadding(size);
+    final gridSpacing          = _getGridSpacing(size);
+    final crossAxisCount       = _getGridCrossAxisCount(size);
+    final childAspectRatio     = _getGridChildAspectRatio(size);
+    final mainPadding          = _getMainPadding(size);
 
     return Scaffold(
       backgroundColor: _surfaceColor,
       body: SafeArea(
         child: Consumer<ProductProvider>(
-          builder: (context, productProvider, child) {
-            // Update categories when products change
-            if (productProvider.products.isNotEmpty) {
-              _updateCategories(productProvider.products);
-            }
+          builder: (context, provider, _) {
+            // Keep categories in sync with whatever the API returns
+            _syncCategories(provider.products);
 
-            final filteredProducts = _getFilteredProducts(productProvider.products);
+            final filteredProducts = _getFilteredProducts(provider.products);
 
             return Column(
               children: [
-                // Header with title and search
+                // ── Header ──────────────────────────────────────────────────
                 Padding(
                   padding: mainPadding,
                   child: Row(
@@ -317,7 +227,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             Text(
                               _searchQuery.isEmpty
                                   ? "Discover amazing products"
-                                  : "Search results for '$_searchQuery'",
+                                  : "Results for '$_searchQuery'",
                               style: GoogleFonts.poppins(
                                 fontSize: subtitleSize,
                                 fontWeight: FontWeight.w400,
@@ -327,7 +237,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           ],
                         ),
 
-                      // Search Bar
+                      // Search bar (shown when _isSearching)
                       if (_isSearching)
                         Expanded(
                           child: Container(
@@ -352,28 +262,23 @@ class _ShopScreenState extends State<ShopScreen> {
                                   color: _textSecondary.withOpacity(0.5),
                                   fontSize: subtitleSize,
                                 ),
-                                prefixIcon: Icon(
-                                  Icons.search_rounded,
-                                  color: _textSecondary,
-                                  size: searchIconSize * 0.8,
-                                ),
+                                prefixIcon: Icon(Icons.search_rounded,
+                                    color: _textSecondary,
+                                    size: searchIconSize * 0.8),
                                 suffixIcon: _searchQuery.isNotEmpty
                                     ? IconButton(
-                                  icon: Icon(
-                                    Icons.clear_rounded,
-                                    color: _textSecondary,
-                                    size: searchIconSize * 0.8,
-                                  ),
+                                  icon: Icon(Icons.clear_rounded,
+                                      color: _textSecondary,
+                                      size: searchIconSize * 0.8),
                                   onPressed: _clearSearch,
                                 )
                                     : null,
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(vertical: size.width >= 1200 ? 16 : 12),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: size.width >= 1200 ? 16 : 12),
                               ),
                               style: GoogleFonts.poppins(
-                                fontSize: subtitleSize,
-                                color: _textPrimary,
-                              ),
+                                  fontSize: subtitleSize, color: _textPrimary),
                             ),
                           ),
                         ),
@@ -397,7 +302,9 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                         child: IconButton(
                           icon: Icon(
-                            _isSearching ? Icons.close_rounded : Icons.search_rounded,
+                            _isSearching
+                                ? Icons.close_rounded
+                                : Icons.search_rounded,
                             color: _isSearching ? _white : _textSecondary,
                             size: searchIconSize,
                           ),
@@ -408,25 +315,25 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                 ),
 
-                // Categories horizontal list (hide when searching)
+                // ── Category chips (hidden while searching) ──────────────────
                 if (!_isSearching)
                   SizedBox(
                     height: categoryChipHeight,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      padding: EdgeInsets.symmetric(horizontal: mainPadding.left),
+                      padding:
+                      EdgeInsets.symmetric(horizontal: mainPadding.left),
                       itemCount: _categories.length,
                       itemBuilder: (context, index) {
                         final category = _categories[index];
                         final isSelected = category == _selectedCategory;
                         return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedCategory = category;
-                            });
-                          },
-                          child: Container(
-                            margin: EdgeInsets.only(right: gridSpacing * 0.6),
+                          onTap: () =>
+                              setState(() => _selectedCategory = category),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin:
+                            EdgeInsets.only(right: gridSpacing * 0.6),
                             padding: EdgeInsets.symmetric(
                               horizontal: categoryChipPadding,
                               vertical: categoryChipPadding * 0.4,
@@ -436,14 +343,15 @@ class _ShopScreenState extends State<ShopScreen> {
                                   ? LinearGradient(
                                 colors: [
                                   _primaryColor,
-                                  _secondaryColor,
+                                  _secondaryColor
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               )
                                   : null,
                               color: isSelected ? null : _white,
-                              borderRadius: BorderRadius.circular(size.width >= 1200 ? 30 : 25),
+                              borderRadius: BorderRadius.circular(
+                                  size.width >= 1200 ? 30 : 25),
                               border: Border.all(
                                 color: isSelected
                                     ? Colors.transparent
@@ -453,9 +361,13 @@ class _ShopScreenState extends State<ShopScreen> {
                               boxShadow: isSelected
                                   ? [
                                 BoxShadow(
-                                  color: _primaryColor.withOpacity(0.3),
-                                  blurRadius: size.width >= 1200 ? 15 : 10,
-                                  offset: Offset(0, size.width >= 1200 ? 5 : 3),
+                                  color:
+                                  _primaryColor.withOpacity(0.3),
+                                  blurRadius:
+                                  size.width >= 1200 ? 15 : 10,
+                                  offset: Offset(
+                                      0,
+                                      size.width >= 1200 ? 5 : 3),
                                 ),
                               ]
                                   : null,
@@ -464,8 +376,11 @@ class _ShopScreenState extends State<ShopScreen> {
                               child: Text(
                                 category,
                                 style: GoogleFonts.poppins(
-                                  color: isSelected ? _white : _textSecondary,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color:
+                                  isSelected ? _white : _textSecondary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                   fontSize: categoryChipFontSize,
                                 ),
                               ),
@@ -478,7 +393,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
                 SizedBox(height: size.height * 0.01),
 
-                // Products count and filter
+                // ── Count & filter row ───────────────────────────────────────
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: mainPadding.left,
@@ -487,24 +402,16 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (productProvider.isLoading && productProvider.products.isEmpty)
-                        Text(
-                          'Loading products...',
-                          style: GoogleFonts.poppins(
-                            fontSize: productCountSize,
-                            fontWeight: FontWeight.w500,
-                            color: _textSecondary,
-                          ),
-                        )
-                      else
-                        Text(
-                          '${filteredProducts.length} ${filteredProducts.length == 1 ? 'Product' : 'Products'}',
-                          style: GoogleFonts.poppins(
-                            fontSize: productCountSize,
-                            fontWeight: FontWeight.w500,
-                            color: _textSecondary,
-                          ),
+                      Text(
+                        provider.isLoading && provider.products.isEmpty
+                            ? 'Loading products...'
+                            : '${filteredProducts.length} ${filteredProducts.length == 1 ? 'Product' : 'Products'}',
+                        style: GoogleFonts.poppins(
+                          fontSize: productCountSize,
+                          fontWeight: FontWeight.w500,
+                          color: _textSecondary,
                         ),
+                      ),
                       if (!_isSearching)
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -515,17 +422,13 @@ class _ShopScreenState extends State<ShopScreen> {
                             color: _white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
+                                color: Colors.grey[300]!, width: 1),
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.tune_rounded,
-                                size: filterIconSize,
-                                color: _textSecondary,
-                              ),
+                              Icon(Icons.tune_rounded,
+                                  size: filterIconSize,
+                                  color: _textSecondary),
                               SizedBox(width: size.width * 0.005),
                               Text(
                                 'Filter',
@@ -542,183 +445,196 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                 ),
 
-                // Products grid
+                // ── Products grid ────────────────────────────────────────────
                 Expanded(
-                  child: productProvider.isLoading && productProvider.products.isEmpty
-                      ? Center(
-                    child: CircularProgressIndicator(
-                      color: _primaryColor,
-                    ),
-                  )
-                      : productProvider.errorMessage != null && productProvider.products.isEmpty
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: emptyStateIconSize,
-                          color: Colors.red[300],
-                        ),
-                        SizedBox(height: size.height * 0.02),
-                        Text(
-                          'Error loading products',
-                          style: GoogleFonts.poppins(
-                            fontSize: emptyStateTitleSize,
-                            fontWeight: FontWeight.w600,
-                            color: _textPrimary,
-                          ),
-                        ),
-                        SizedBox(height: size.height * 0.01),
-                        Text(
-                          productProvider.errorMessage!,
-                          style: GoogleFonts.poppins(
-                            fontSize: emptyStateTextSize,
-                            color: _textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: gridSpacing),
-                        ElevatedButton(
-                          onPressed: () {
-                            productProvider.fetchProducts(refresh: true);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _primaryColor,
-                            foregroundColor: _white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: gridSpacing * 1.5,
-                              vertical: gridSpacing * 0.8,
-                            ),
-                            minimumSize: Size(buttonSize * 1.5, buttonSize),
-                          ),
-                          child: Text(
-                            'Try Again',
-                            style: GoogleFonts.poppins(
-                              fontSize: buttonFontSize,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                      : filteredProducts.isEmpty
-                      ? Center(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(gridSpacing),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _searchQuery.isNotEmpty ? Icons.search_off_rounded : Icons.inbox_rounded,
-                            size: emptyStateIconSize,
-                            color: _textSecondary.withOpacity(0.3),
-                          ),
-                          SizedBox(height: size.height * 0.02),
-                          Text(
-                            _searchQuery.isNotEmpty
-                                ? "No products found"
-                                : "No products in this category",
-                            style: GoogleFonts.poppins(
-                              fontSize: emptyStateTitleSize,
-                              fontWeight: FontWeight.w600,
-                              color: _textPrimary,
-                            ),
-                          ),
-                          SizedBox(height: size.height * 0.01),
-                          Text(
-                            _searchQuery.isNotEmpty
-                                ? "Try searching with different keywords"
-                                : "Try selecting a different category",
-                            style: GoogleFonts.poppins(
-                              fontSize: emptyStateTextSize,
-                              color: _textSecondary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (_searchQuery.isNotEmpty)
-                            Padding(
-                              padding: EdgeInsets.only(top: gridSpacing),
-                              child: ElevatedButton(
-                                onPressed: _clearSearch,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _primaryColor,
-                                  foregroundColor: _white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: gridSpacing * 1.5,
-                                    vertical: gridSpacing * 0.8,
-                                  ),
-                                  minimumSize: Size(buttonSize * 1.5, buttonSize),
-                                ),
-                                child: Text(
-                                  'Clear Search',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: buttonFontSize,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  )
-                      : GridView.builder(
-                    padding: EdgeInsets.all(gridSpacing),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      childAspectRatio: childAspectRatio,
-                      crossAxisSpacing: gridSpacing,
-                      mainAxisSpacing: gridSpacing,
-                    ),
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      return ProductCard(
-                        product: filteredProducts[index],
-                        discountPercentage: index % 3 == 0 ? 20 : null,
-                        onAddToCart: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${filteredProducts[index].title} added to cart',
-                                style: GoogleFonts.poppins(),
-                              ),
-                              backgroundColor: _primaryColor,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                      );
-                    },
+                  child: _buildBody(
+                    context: context,
+                    provider: provider,
+                    filteredProducts: filteredProducts,
+                    size: size,
+                    gridSpacing: gridSpacing,
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: childAspectRatio,
+                    emptyStateIconSize: emptyStateIconSize,
+                    emptyStateTitleSize: emptyStateTitleSize,
+                    emptyStateTextSize: emptyStateTextSize,
+                    buttonSize: buttonSize,
+                    buttonFontSize: buttonFontSize,
                   ),
                 ),
 
-                // Loading indicator for pagination
-                if (productProvider.isLoading && productProvider.products.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF6366F1),
-                      ),
-                    ),
+                // ── Pagination loading indicator ─────────────────────────────
+                if (provider.isLoading && provider.products.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(color: _primaryColor),
                   ),
               ],
             );
           },
         ),
       ),
+    );
+  }
+
+  // ── Body states ───────────────────────────────────────────────────────────
+  Widget _buildBody({
+    required BuildContext context,
+    required ProductProvider provider,
+    required List<Product> filteredProducts,
+    required Size size,
+    required double gridSpacing,
+    required int crossAxisCount,
+    required double childAspectRatio,
+    required double emptyStateIconSize,
+    required double emptyStateTitleSize,
+    required double emptyStateTextSize,
+    required double buttonSize,
+    required double buttonFontSize,
+  }) {
+    // 1️⃣ Initial loading
+    if (provider.isLoading && provider.products.isEmpty) {
+      return Center(
+        child: CircularProgressIndicator(color: _primaryColor),
+      );
+    }
+
+    // 2️⃣ Error state
+    if (provider.errorMessage != null && provider.products.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline,
+                size: emptyStateIconSize, color: Colors.red[300]),
+            SizedBox(height: size.height * 0.02),
+            Text(
+              'Error loading products',
+              style: GoogleFonts.poppins(
+                  fontSize: emptyStateTitleSize,
+                  fontWeight: FontWeight.w600,
+                  color: _textPrimary),
+            ),
+            SizedBox(height: size.height * 0.01),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: gridSpacing * 2),
+              child: Text(
+                provider.errorMessage!,
+                style: GoogleFonts.poppins(
+                    fontSize: emptyStateTextSize, color: _textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            SizedBox(height: gridSpacing),
+            ElevatedButton(
+              onPressed: () => provider.fetchProducts(refresh: true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryColor,
+                foregroundColor: _white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                minimumSize: Size(buttonSize * 1.5, buttonSize),
+              ),
+              child: Text('Try Again',
+                  style: GoogleFonts.poppins(
+                      fontSize: buttonFontSize,
+                      fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 3️⃣ Empty filtered results
+    if (filteredProducts.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(gridSpacing),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _searchQuery.isNotEmpty
+                    ? Icons.search_off_rounded
+                    : Icons.inbox_rounded,
+                size: emptyStateIconSize,
+                color: _textSecondary.withOpacity(0.3),
+              ),
+              SizedBox(height: size.height * 0.02),
+              Text(
+                _searchQuery.isNotEmpty
+                    ? "No products found"
+                    : "No products in this category",
+                style: GoogleFonts.poppins(
+                    fontSize: emptyStateTitleSize,
+                    fontWeight: FontWeight.w600,
+                    color: _textPrimary),
+              ),
+              SizedBox(height: size.height * 0.01),
+              Text(
+                _searchQuery.isNotEmpty
+                    ? "Try searching with different keywords"
+                    : "Try selecting a different category",
+                style: GoogleFonts.poppins(
+                    fontSize: emptyStateTextSize, color: _textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              if (_searchQuery.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: gridSpacing),
+                  child: ElevatedButton(
+                    onPressed: _clearSearch,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryColor,
+                      foregroundColor: _white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      minimumSize: Size(buttonSize * 1.5, buttonSize),
+                    ),
+                    child: Text('Clear Search',
+                        style: GoogleFonts.poppins(
+                            fontSize: buttonFontSize,
+                            fontWeight: FontWeight.w500)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 4️⃣ Grid with products
+    return GridView.builder(
+      controller: _scrollController, // ← enables scroll-to-load-more
+      padding: EdgeInsets.all(gridSpacing),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: childAspectRatio,
+        crossAxisSpacing: gridSpacing,
+        mainAxisSpacing: gridSpacing,
+      ),
+      itemCount: filteredProducts.length,
+      itemBuilder: (context, index) {
+        return ProductCard(
+          product: filteredProducts[index],
+          discountPercentage: index % 3 == 0 ? 20 : null,
+          onAddToCart: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${filteredProducts[index].title} added to cart',
+                  style: GoogleFonts.poppins(),
+                ),
+                backgroundColor: _primaryColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -433,7 +433,7 @@ class AdminOrdersScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                )).toList(),
+                )),
 
                 const Divider(height: 24),
 

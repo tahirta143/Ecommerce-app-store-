@@ -60,7 +60,7 @@ class _ProductCardState extends State<ProductCard> {
 
       if (!mounted) return;
 
-      final Color picked =
+      final Color? picked =
           palette.vibrantColor?.color ??
               palette.dominantColor?.color ??
               palette.mutedColor?.color ??
@@ -345,7 +345,7 @@ class _ProductCardState extends State<ProductCard> {
                 Row(
                   children: [
                     Text(
-                      '\$${widget.product.price.toStringAsFixed(2)}',
+                      '${widget.product.price.toStringAsFixed(2)}',
                       style: GoogleFonts.poppins(
                         fontSize: oldPriceFontSize,
                         color: const Color(0xFF64748B),
@@ -374,7 +374,7 @@ class _ProductCardState extends State<ProductCard> {
                   ],
                 ),
                 Text(
-                  '\$${discountedPrice!.toStringAsFixed(2)}',
+                  '${discountedPrice!.toStringAsFixed(2)}',
                   style: GoogleFonts.poppins(
                     fontSize: priceFontSize,
                     fontWeight: FontWeight.w700,
@@ -383,7 +383,7 @@ class _ProductCardState extends State<ProductCard> {
                 ),
               ] else ...[
                 Text(
-                  '\$${widget.product.price.toStringAsFixed(2)}',
+                  '${widget.product.price.toStringAsFixed(2)}',
                   style: GoogleFonts.poppins(
                     fontSize: priceFontSize,
                     fontWeight: FontWeight.w700,
@@ -481,7 +481,7 @@ class _ProductCardState extends State<ProductCard> {
 }
 
 extension on Color {
-  get color => null;
+  Null get color => null;
 }
 
 // Custom Timeout Exception class

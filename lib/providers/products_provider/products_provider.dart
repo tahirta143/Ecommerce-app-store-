@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
 import '../../models/products_model/products_model.dart';
 
@@ -21,6 +22,18 @@ class ProductProvider with ChangeNotifier {
 
   // Base URL
   static const String baseUrl = 'https://backend-with-node-js-ueii.onrender.com/api';
+
+  /// Safe notifyListeners — defers the notification if we're currently
+  /// in a build/layout phase to avoid the "setState during build" error.
+  void _safeNotify() {
+    // If the scheduler is in the persistent callbacks phase (i.e. build/layout),
+    // schedule the notification for after the current frame instead.
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    } else {
+      notifyListeners();
+    }
+  }
 
   // Fetch all products
   Future<void> fetchProducts({bool refresh = false}) async {
@@ -54,17 +67,17 @@ class ProductProvider with ChangeNotifier {
           _products.addAll(productsResponse.data);
         }
 
-        // Check if we have more pages
         _hasMorePages = productsResponse.data.length == _itemsPerPage;
         if (_hasMorePages) _currentPage++;
 
-        notifyListeners();
+        _safeNotify();
       } else {
         throw Exception('Failed to load products. Status code: ${response.statusCode}');
       }
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
-      print('Error fetching products: $e');
+      debugPrint('Error fetching products: $e');
+      _safeNotify();
     } finally {
       _setLoadingState(false);
     }
@@ -92,30 +105,28 @@ class ProductProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
         final productsResponse = ProductsResponse.fromJson(jsonResponse);
-
         _products = productsResponse.data;
-        _hasMorePages = false; // Disable pagination for search results
-        notifyListeners();
+        _hasMorePages = false;
+        _safeNotify();
       } else {
         throw Exception('Failed to search products. Status code: ${response.statusCode}');
       }
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
-      print('Error searching products: $e');
+      debugPrint('Error searching products: $e');
+      _safeNotify();
     } finally {
       _setLoadingState(false);
     }
   }
 
-  // Helper method to set loading state
   void _setLoadingState(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    _safeNotify(); // ← was notifyListeners(), which caused the crash
   }
 
-  // Clear error message
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    _safeNotify();
   }
 }

@@ -10,7 +10,7 @@ class AdminCategoriesScreen extends StatefulWidget {
 
 class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
   // Sample categories data for UI demonstration
-  List<String> _categories = [
+  final List<String> _categories = [
     'Electronics',
     'Fashion',
     'Home & Garden',

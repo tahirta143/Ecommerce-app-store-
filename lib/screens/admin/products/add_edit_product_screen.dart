@@ -310,7 +310,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       Switch(
                         value: false,
                         onChanged: (value) {},
-                        activeColor: _successColor,
+                        activeThumbColor: _successColor,
                       ),
                     ],
                   ),
@@ -365,7 +365,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       Switch(
                         value: false,
                         onChanged: (value) {},
-                        activeColor: _primaryColor,
+                        activeThumbColor: _primaryColor,
                       ),
                     ],
                   ),

@@ -1,14 +1,11 @@
 import 'package:ecommerce_app/screens/admin/admin_dashboard_screen.dart';
 import 'package:ecommerce_app/screens/auth/signup_screen.dart';
-
-
 import 'package:ecommerce_app/screens/dashboard/main_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-
 import '../../providers/auth_provider/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -103,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
             top: screenHeight * 0.01,
             left: 0,
             right: 0,
-            child: Container(
+            child: SizedBox(
               height: screenHeight * 0.40,
               child: AnimatedBuilder(
                 animation: _controller,
