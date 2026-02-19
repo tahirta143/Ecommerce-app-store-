@@ -45,26 +45,32 @@ class _ProductCardState extends State<ProductCard> {
           setState(() {
             _hasError = true;
             _isLoadingColor = false;
-            _dominantColor = Colors.grey.shade300;
+            _dominantColor = Colors.grey.shade100;
           });
         }
         return;
       }
 
       final imageProvider = NetworkImage(widget.product.primaryImageUrl);
-      final PaletteGenerator palette = await PaletteGenerator.fromImageProvider(
-        imageProvider,
-        size: const Size(200, 200),
-        maximumColorCount: 16,
-      ).timeout(const Duration(seconds: 3), onTimeout: () => throw TimeoutException());
+      final PaletteGenerator palette =
+          await PaletteGenerator.fromImageProvider(
+            imageProvider,
+            size: const Size(200, 200),
+            maximumColorCount: 16,
+          ).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => throw TimeoutException(),
+          );
 
       if (!mounted) return;
 
       final Color? picked =
           palette.vibrantColor?.color ??
-              palette.dominantColor?.color ??
-              palette.mutedColor?.color ??
-              (palette.colors.isNotEmpty ? palette.colors.first.color : Colors.grey.shade300);
+          palette.dominantColor?.color ??
+          palette.mutedColor?.color ??
+          (palette.colors.isNotEmpty
+              ? palette.colors.first.color
+              : Colors.grey.shade100);
 
       setState(() {
         _dominantColor = picked;
@@ -74,7 +80,7 @@ class _ProductCardState extends State<ProductCard> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _dominantColor = Colors.grey.shade300;
+          _dominantColor = Colors.grey.shade100;
           _isLoadingColor = false;
           _hasError = true;
         });
@@ -86,104 +92,229 @@ class _ProductCardState extends State<ProductCard> {
   Widget build(BuildContext context) {
     // MediaQuery for responsive sizing
     final size = MediaQuery.of(context).size;
-    final isTablet = size.width >= 600;
-    final isDesktop = size.width >= 900;
-    final isLargeDesktop = size.width >= 1200;
+    final screenWidth = size.width;
+    final isTablet = screenWidth >= 600;
+    final isDesktop = screenWidth >= 900;
+    final isLargeDesktop = screenWidth >= 1200;
 
-    final hasDiscount = widget.discountPercentage != null && widget.discountPercentage! > 0;
+    // Calculate card dimensions based on screen size - slightly reduced
+    final cardHeight = isLargeDesktop
+        ? 290.0
+        : (isDesktop ? 260.0 : (isTablet ? 240.0 : 220.0));
+
+    final imageHeight = cardHeight * 0.7; // 60% of card height for image
+    final contentHeight = cardHeight * 0.3; // 40% of card height for content
+
+    final hasDiscount =
+        widget.discountPercentage != null && widget.discountPercentage! > 0;
     final discountedPrice = hasDiscount
         ? widget.product.price * (1 - widget.discountPercentage! / 100)
         : null;
 
-    // Responsive font sizes (all as double)
-    final titleFontSize = isLargeDesktop ? 16.0 : (isDesktop ? 15.0 : (isTablet ? 14.0 : 13.0));
-    final priceFontSize = isLargeDesktop ? 18.0 : (isDesktop ? 17.0 : (isTablet ? 16.0 : 15.0));
-    final oldPriceFontSize = isLargeDesktop ? 14.0 : (isDesktop ? 13.0 : (isTablet ? 12.0 : 11.0));
-    final badgeFontSize = isLargeDesktop ? 12.0 : (isDesktop ? 11.0 : (isTablet ? 10.0 : 9.0));
-    final stockFontSize = isLargeDesktop ? 11.0 : (isDesktop ? 10.0 : (isTablet ? 9.0 : 8.0));
-    final cartButtonSize = isLargeDesktop ? 24.0 : (isDesktop ? 22.0 : (isTablet ? 20.0 : 18.0));
+    // Responsive font sizes - slightly reduced
+    final titleFontSize = isLargeDesktop
+        ? 14.0
+        : (isDesktop ? 13.0 : (isTablet ? 12.0 : 11.0));
 
-    // Responsive paddings (all as double)
-    final contentPadding = isLargeDesktop ? 14.0 : (isDesktop ? 12.0 : (isTablet ? 10.0 : 8.0));
-    final borderRadius = isLargeDesktop ? 20.0 : (isDesktop ? 18.0 : (isTablet ? 16.0 : 14.0));
-    final badgeHorizontalPadding = isLargeDesktop ? 10.0 : 8.0;
-    final badgeVerticalPadding = isLargeDesktop ? 6.0 : 4.0;
-    final positionOffset = isLargeDesktop ? 12.0 : (isDesktop ? 10.0 : (isTablet ? 8.0 : 6.0));
+    final priceFontSize = isLargeDesktop
+        ? 16.0
+        : (isDesktop ? 15.0 : (isTablet ? 14.0 : 13.0));
 
-    // Shadow values
-    final shadowBlur = isLargeDesktop ? 16.0 : (isDesktop ? 14.0 : (isTablet ? 12.0 : 10.0));
-    final shadowOffset = isLargeDesktop ? 6.0 : (isDesktop ? 5.0 : (isTablet ? 4.0 : 3.0));
-    final badgeShadowBlur = isLargeDesktop ? 10.0 : 8.0;
-    final badgeShadowOffset = isLargeDesktop ? 3.0 : 2.0;
+    final oldPriceFontSize = isLargeDesktop
+        ? 12.0
+        : (isDesktop ? 11.0 : (isTablet ? 10.0 : 9.0));
+
+    final smallFontSize = isLargeDesktop
+        ? 10.0
+        : (isDesktop ? 9.0 : (isTablet ? 8.0 : 7.0));
+
+    // Responsive paddings - slightly reduced
+    final contentPadding = isLargeDesktop
+        ? 10.0
+        : (isDesktop ? 8.0 : (isTablet ? 6.0 : 4.0));
+
+    final borderRadius = isLargeDesktop
+        ? 16.0
+        : (isDesktop ? 14.0 : (isTablet ? 12.0 : 10.0));
+
+    // Format price with PKR
+    String formatPrice(double price) {
+      return 'Rs. ${price.toStringAsFixed(0)}';
+    }
 
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(product: widget.product)),
+        MaterialPageRoute(
+          builder: (_) => ProductDetailScreen(product: widget.product),
+        ),
       ),
       child: Container(
+        height: cardHeight,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(borderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: shadowBlur,
-              offset: Offset(0, shadowOffset),
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(borderRadius),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // IMAGE AREA
-              Expanded(
-                flex: 6,
-                child: _buildImageArea(
-                  hasDiscount,
-                  positionOffset,
-                  badgeHorizontalPadding,
-                  badgeVerticalPadding,
-                  badgeFontSize,
-                  badgeShadowBlur,
-                  badgeShadowOffset,
+              Container(
+                height: imageHeight,
+                color: _dominantColor?.withOpacity(0.2) ?? Colors.grey.shade50,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Product image
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(contentPadding * 1.5),
+                        child: _buildProductImage(),
+                      ),
+                    ),
+
+                    // Out of Stock overlay
+                    if (!widget.product.inStock)
+                      Container(
+                        color: Colors.black.withOpacity(0.3),
+                        child: Center(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: contentPadding * 1.5,
+                              vertical: contentPadding * 0.6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Out of Stock',
+                              style: GoogleFonts.poppins(
+                                fontSize: smallFontSize,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red.shade600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 
               // PRODUCT DETAILS
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: EdgeInsets.all(contentPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        widget.product.title,
-                        style: GoogleFonts.poppins(
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E293B),
+              Container(
+                height: contentHeight,
+                padding: EdgeInsets.all(contentPadding),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Title and Price section
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Product title
+                          Text(
+                            widget.product.title,
+                            style: GoogleFonts.poppins(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF2D3436),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 6),
+                          // Price with zero spacing
+                          if (hasDiscount) ...[
+                            Wrap(
+                              spacing: 2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  formatPrice(discountedPrice!),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: priceFontSize,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF2D3436),
+                                  ),
+                                ),
+                                Text(
+                                  formatPrice(widget.product.price),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: oldPriceFontSize,
+                                    color: Colors.grey.shade400,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            Text(
+                              formatPrice(widget.product.price),
+                              style: GoogleFonts.poppins(
+                                fontSize: priceFontSize,
+                                fontWeight: FontWeight.w600,
+                                color: widget.product.inStock
+                                    ? const Color(0xFF2D3436)
+                                    : Colors.grey.shade400,
+                              ),
+                            ),
+                          ],
+
+                          // Low stock indicator - only if needed
+                          if (widget.product.inStock &&
+                              widget.product.stock < 10)
+                            Text(
+                              'Only ${widget.product.stock} left',
+                              style: GoogleFonts.poppins(
+                                fontSize: smallFontSize,
+                                color: Colors.orange.shade400,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // Add to cart button
+                    if (widget.product.inStock)
+                      Container(
+                        width: 28,
+                        height: 28,
+                        margin: EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          shape: BoxShape.circle,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: widget.onAddToCart,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Center(
+                              child: Icon(
+                                Icons.add,
+                                color: Colors.grey.shade700,
+                                size: priceFontSize * 1.1,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      _buildPriceRow(
-                        hasDiscount,
-                        discountedPrice,
-                        priceFontSize,
-                        oldPriceFontSize,
-                        badgeFontSize,
-                        stockFontSize,
-                        badgeHorizontalPadding,
-                        badgeVerticalPadding,
-                        cartButtonSize,
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ],
@@ -193,95 +324,12 @@ class _ProductCardState extends State<ProductCard> {
     );
   }
 
-  Widget _buildImageArea(
-      bool hasDiscount,
-      double positionOffset,
-      double badgeHorizontalPadding,
-      double badgeVerticalPadding,
-      double badgeFontSize,
-      double badgeShadowBlur,
-      double badgeShadowOffset,
-      ) {
-    final bgColor = _dominantColor ?? Colors.grey.shade200;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Dominant color background
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-          color: _isLoadingColor ? Colors.grey.shade200 : bgColor,
-        ),
-
-        // Subtle gradient overlay
-        if (!_isLoadingColor && _dominantColor != null)
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.5, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    bgColor.withOpacity(0.55),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-        // Product image
-        Positioned.fill(
-          child: _buildProductImage(),
-        ),
-
-        // Out of Stock badge
-        if (!widget.product.inStock)
-          Positioned(
-            top: positionOffset,
-            left: positionOffset,
-            child: _buildBadge(
-              label: 'Out of Stock',
-              colors: [Colors.red.shade600, Colors.red.shade400],
-              shadowColor: Colors.red,
-              fontSize: badgeFontSize,
-              horizontalPadding: badgeHorizontalPadding,
-              verticalPadding: badgeVerticalPadding,
-              shadowBlur: badgeShadowBlur,
-              shadowOffset: badgeShadowOffset,
-            ),
-          ),
-
-        // Discount badge
-        if (hasDiscount && widget.product.inStock)
-          Positioned(
-            top: positionOffset,
-            left: positionOffset,
-            child: _buildBadge(
-              label: '${widget.discountPercentage!.toInt()}% OFF',
-              colors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-              shadowColor: const Color(0xFF6366F1),
-              fontSize: badgeFontSize,
-              horizontalPadding: badgeHorizontalPadding,
-              verticalPadding: badgeVerticalPadding,
-              shadowBlur: badgeShadowBlur,
-              shadowOffset: badgeShadowOffset,
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildProductImage() {
     if (_hasError || widget.product.primaryImageUrl.isEmpty) {
-      return Center(
-        child: Icon(
-          Icons.image_not_supported_outlined,
-          color: Colors.white54,
-          size: 32,
-        ),
+      return Icon(
+        Icons.image_not_supported_outlined,
+        color: Colors.grey.shade400,
+        size: 32,
       );
     }
 
@@ -292,189 +340,23 @@ class _ProductCardState extends State<ProductCard> {
         if (loadingProgress == null) return child;
         return Center(
           child: SizedBox(
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             child: CircularProgressIndicator(
               value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
                   : null,
-              color: Colors.white70,
-              strokeWidth: 2.5,
+              color: Colors.grey.shade400,
+              strokeWidth: 2,
             ),
           ),
         );
       },
-      errorBuilder: (_, __, ___) => Center(
-        child: Icon(
-          Icons.broken_image_outlined,
-          color: Colors.white54,
-          size: 32,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceRow(
-      bool hasDiscount,
-      double? discountedPrice,
-      double priceFontSize,
-      double oldPriceFontSize,
-      double badgeFontSize,
-      double stockFontSize,
-      double badgeHorizontalPadding,
-      double badgeVerticalPadding,
-      double cartButtonSize,
-      ) {
-    return Row(
-      children: [
-        // Price Section
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!widget.product.inStock)
-                Text(
-                  'Out of Stock',
-                  style: GoogleFonts.poppins(
-                    fontSize: stockFontSize,
-                    color: Colors.red,
-                    fontWeight: FontWeight.w500,
-                  ),
-                )
-              else if (hasDiscount) ...[
-                Row(
-                  children: [
-                    Text(
-                      '${widget.product.price.toStringAsFixed(2)}',
-                      style: GoogleFonts.poppins(
-                        fontSize: oldPriceFontSize,
-                        color: const Color(0xFF64748B),
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: badgeHorizontalPadding * 0.8,
-                        vertical: badgeVerticalPadding * 0.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEEF2FF),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${widget.discountPercentage!.toInt()}%',
-                        style: GoogleFonts.poppins(
-                          fontSize: badgeFontSize * 0.9,
-                          color: const Color(0xFF6366F1),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  '${discountedPrice!.toStringAsFixed(2)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: priceFontSize,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF6366F1),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  '${widget.product.price.toStringAsFixed(2)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: priceFontSize,
-                    fontWeight: FontWeight.w700,
-                    color: widget.product.inStock ? const Color(0xFF1E293B) : Colors.grey,
-                  ),
-                ),
-              ],
-              if (widget.product.inStock && widget.product.stock < 10)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    'Only ${widget.product.stock} left',
-                    style: GoogleFonts.poppins(
-                      fontSize: stockFontSize,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        // Add to Cart Button
-        if (widget.product.inStock)
-          Container(
-            margin: EdgeInsets.only(left: 8.0),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF6366F1).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: widget.onAddToCart,
-                borderRadius: BorderRadius.circular(30),
-                child: Container(
-                  padding: EdgeInsets.all(cartButtonSize * 0.4),
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Colors.white,
-                    size: cartButtonSize * 0.7,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildBadge({
-    required String label,
-    required List<Color> colors,
-    required Color shadowColor,
-    required double fontSize,
-    required double horizontalPadding,
-    required double verticalPadding,
-    required double shadowBlur,
-    required double shadowOffset,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor.withOpacity(0.35),
-            blurRadius: shadowBlur,
-            offset: Offset(0, shadowOffset),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w600,
-        ),
+      errorBuilder: (_, __, ___) => Icon(
+        Icons.broken_image_outlined,
+        color: Colors.grey.shade400,
+        size: 32,
       ),
     );
   }
@@ -484,5 +366,4 @@ extension on Color {
   Null get color => null;
 }
 
-// Custom Timeout Exception class
 class TimeoutException implements Exception {}
