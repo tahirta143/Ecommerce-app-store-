@@ -90,7 +90,7 @@ class _MainWrapperState extends State<MainWrapper> {
     if (size.width >= 1200) return size.height * 0.10; // Large desktop
     if (size.width >= 900) return size.height * 0.11; // Desktop
     if (size.width >= 600) return size.height * 0.12; // Tablet
-    return size.height * 0.13; // Mobile
+    return size.height * 0.10; // Mobile
   }
 
   double _getIconSize(Size size) {
@@ -148,7 +148,7 @@ class _MainWrapperState extends State<MainWrapper> {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     // Adjust heights for landscape mode
-    final appBarHeight = isLandscape ? size.height * 0.18 : _getAppBarHeight(size);
+    final appBarHeight = isLandscape ? size.height * 0.10 : _getAppBarHeight(size);
     final iconSize = _getIconSize(size);
     final titleSize = _getTitleSize(size);
     final subtitleSize = _getSubtitleSize(size);
@@ -232,30 +232,30 @@ class _MainWrapperState extends State<MainWrapper> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: logoSize * 0.6,
-                              height: logoSize * 0.6,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.4),
-                                  width: 1.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.shopping_bag_rounded,
-                                color: Colors.white,
-                                size: logoSize * 0.35,
-                              ),
-                            ),
+                            // Container(
+                            //   width: logoSize * 0.6,
+                            //   height: logoSize * 0.6,
+                            //   decoration: BoxDecoration(
+                            //     color: Colors.white.withOpacity(0.2),
+                            //     borderRadius: BorderRadius.circular(10),
+                            //     border: Border.all(
+                            //       color: Colors.white.withOpacity(0.4),
+                            //       width: 1.5,
+                            //     ),
+                            //     boxShadow: [
+                            //       BoxShadow(
+                            //         color: Colors.black.withOpacity(0.15),
+                            //         blurRadius: 10,
+                            //         offset: const Offset(0, 3),
+                            //       ),
+                            //     ],
+                            //   ),
+                            //   child: Icon(
+                            //     Icons.shopping_bag_rounded,
+                            //     color: Colors.white,
+                            //     size: logoSize * 0.35,
+                            //   ),
+                            // ),
                             SizedBox(width: size.width * 0.015),
                             Flexible(
                               child: Text(
